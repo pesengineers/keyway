@@ -16,6 +16,7 @@ def _settings(tmp_path: Path) -> Settings:
         ffmpeg_path=executable,
         ffprobe_path=executable,
         temp_dir=tmp_path / "tmp",
+        analysis_api_key="test-key",
         model_cache_dir=tmp_path / "models",
         output_dir=tmp_path / "output",
         local_source_roots=[tmp_path / "media"],
@@ -28,6 +29,18 @@ def test_health_and_readiness(tmp_path: Path) -> None:
     with TestClient(app) as client:
         assert client.get("/health").json() == {"status": "ok"}
         assert client.get("/ready").json() == {"status": "ready"}
+
+
+def test_readiness_fails_without_analysis_key(tmp_path: Path) -> None:
+    settings = _settings(tmp_path)
+    settings.analysis_api_key = None
+    app = create_app(settings)
+
+    with TestClient(app) as client:
+        response = client.get("/ready")
+
+    assert response.status_code == 503
+    assert response.json()["detail"] == ["analysis API key is not configured"]
 
 
 def test_local_endpoint_rejects_path_outside_mount(tmp_path: Path) -> None:

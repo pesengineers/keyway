@@ -1,0 +1,25 @@
+services:
+  video-review-worker:
+    build: .
+    image: ghcr.io/pesengineers/video-review-worker:latest
+    restart: unless-stopped
+    env_file:
+      - path: .env
+        required: false
+    volumes:
+      - ./media:/media:ro
+      - ./models:/models
+      - ./output:/output
+      - ./tmp:/tmp/video-review-worker
+    ports:
+      - "127.0.0.1:8000:8000"
+    # NVIDIA host: uncomment the next line. Select a specific GPU with
+    # NVIDIA_VISIBLE_DEVICES in .env, preferably using its stable GPU UUID.
+    # gpus: all
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    read_only: true
+    tmpfs:
+      - /run:size=16m,mode=0755

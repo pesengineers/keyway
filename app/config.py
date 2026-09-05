@@ -4,7 +4,7 @@ import tempfile
 from functools import lru_cache
 from pathlib import Path
 
-from pydantic import Field, SecretStr
+from pydantic import Field, SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -43,6 +43,12 @@ class Settings(BaseSettings):
     max_concurrent_jobs: int = Field(default=1, ge=1, le=16)
 
     log_level: str = "INFO"
+
+    @field_validator("analysis_api_key", mode="before")
+    @classmethod
+    def empty_api_key_is_unset(cls, value: object) -> object:
+        return None if value == "" else value
+
 
     def prepare_directories(self) -> None:
         self.temp_dir.mkdir(parents=True, exist_ok=True)

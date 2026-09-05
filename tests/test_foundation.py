@@ -31,6 +31,7 @@ def test_environment_overrides(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) 
     monkeypatch.setenv("WHISPER_COMPUTE_TYPE", "int8")
     monkeypatch.setenv("TEMP_DIR", str(tmp_path / "work"))
     monkeypatch.setenv("LOCAL_SOURCE_ROOTS", f'["{tmp_path.as_posix()}"]')
+    monkeypatch.setenv("ANALYSIS_API_KEY", "")
 
     settings = Settings(_env_file=None)
 
@@ -39,6 +40,7 @@ def test_environment_overrides(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) 
     assert settings.whisper_compute_type == "int8"
     assert settings.temp_dir == tmp_path / "work"
     assert settings.local_source_roots == [tmp_path]
+    assert settings.analysis_api_key is None
 
 
 def test_managed_work_directory_cleans_after_failure(tmp_path: Path) -> None:

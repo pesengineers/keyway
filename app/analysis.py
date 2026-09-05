@@ -117,11 +117,14 @@ def parse_analysis_content(content: str) -> AnalysisResult:
 def _limit_transcript(transcript: str, max_characters: int) -> tuple[str, list[str]]:
     if len(transcript) <= max_characters:
         return transcript, []
-    half = max_characters // 2
+    marker = "\n[... middle omitted because transcript exceeded analysis limit ...]\n"
+    retained_characters = max_characters - len(marker)
+    leading_characters = retained_characters // 2
+    trailing_characters = retained_characters - leading_characters
     clipped = (
-        transcript[:half]
-        + "\n[... middle omitted because transcript exceeded analysis limit ...]\n"
-        + transcript[-half:]
+        transcript[:leading_characters]
+        + marker
+        + transcript[-trailing_characters:]
     )
     return clipped, [f"Analysis transcript was limited to {max_characters} characters"]
 
