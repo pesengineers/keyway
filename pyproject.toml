@@ -1,0 +1,34 @@
+[build-system]
+requires = ["setuptools>=80"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "video-review-worker"
+version = "0.1.0"
+description = "Local-first video transcription and review metadata worker"
+readme = "README.md"
+requires-python = ">=3.11"
+license = "MIT"
+authors = [{ name = "PES Engineers" }]
+dependencies = [
+  "fastapi>=0.116,<1",
+  "faster-whisper>=1.2,<2",
+  "httpx>=0.28,<1",
+  "pydantic-settings>=2.10,<3",
+  "uvicorn[standard]>=0.35,<1",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.4,<9",
+]
+
+[project.scripts]
+video-review-worker = "app.cli:main"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+
+[tool.setuptools.packages.find]
+include = ["app*"]
