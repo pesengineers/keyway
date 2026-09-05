@@ -27,10 +27,16 @@ class AnalysisBackend(Protocol):
 
 
 class OpenAICompatibleAnalysisBackend:
-    def __init__(self, settings: Settings) -> None:
+    def __init__(
+        self,
+        settings: Settings,
+        *,
+        transport: httpx.BaseTransport | None = None,
+    ) -> None:
         if settings.analysis_api_key is None:
             raise AnalysisError("ANALYSIS_API_KEY is required for the OpenAI backend")
         self._settings = settings
+        self._transport = transport
 
     def analyze(self, transcript: str, source_filename: str) -> AnalysisOutput:
         prepared_transcript, warnings = _limit_transcript(
@@ -67,7 +73,10 @@ class OpenAICompatibleAnalysisBackend:
             "Content-Type": "application/json",
         }
         try:
-            with httpx.Client(timeout=self._settings.analysis_timeout_seconds) as client:
+            with httpx.Client(
+                timeout=self._settings.analysis_timeout_seconds,
+                transport=self._transport,
+            ) as client:
                 response = client.post(endpoint, headers=headers, json=payload)
                 response.raise_for_status()
         except httpx.TimeoutException as exc:
@@ -93,6 +102,8 @@ def build_analysis_backend(settings: Settings) -> AnalysisBackend:
 
 
 def parse_analysis_content(content: str) -> AnalysisResult:
+    if not isinstance(content, str):
+        raise AnalysisError("Analysis response content was not text")
     candidate = content.strip()
     if candidate.startswith("```json") and candidate.endswith("```"):
         candidate = candidate[7:-3].strip()
