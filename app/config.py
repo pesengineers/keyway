@@ -28,6 +28,7 @@ class Settings(BaseSettings):
         default_factory=lambda: Path(tempfile.gettempdir()) / "video-review-worker"
     )
     model_cache_dir: Path = Field(default=Path.home() / ".cache" / "huggingface")
+    output_dir: Path = Path("/output")
 
     analysis_backend: str = "openai"
     analysis_base_url: str = "https://api.openai.com/v1"
@@ -46,6 +47,7 @@ class Settings(BaseSettings):
     def prepare_directories(self) -> None:
         self.temp_dir.mkdir(parents=True, exist_ok=True)
         self.model_cache_dir.mkdir(parents=True, exist_ok=True)
+        self.output_dir.mkdir(parents=True, exist_ok=True)
 
 
 @lru_cache(maxsize=1)

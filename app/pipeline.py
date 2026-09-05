@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import os
 import tempfile
 import time
@@ -8,14 +9,12 @@ from pathlib import Path
 from app.analysis import AnalysisBackend, build_analysis_backend
 from app.cleanup import managed_work_directory
 from app.config import Settings
-from app.media import (
-    normalize_audio,
-    parse_filename_date,
-    probe_duration,
-    validate_source_file,
-)
+from app.media import normalize_audio, parse_filename_date, probe_duration
 from app.models import PresentationDateSource, ProcessingResult
-from app.transcription import FasterWhisperTranscriber
+from app.sources import MediaSource
+from app.transcription import FasterWhisperTranscriber, Transcriber
+logger = logging.getLogger(__name__)
+
 
 
 class VideoProcessor:
@@ -23,29 +22,30 @@ class VideoProcessor:
         self,
         settings: Settings,
         *,
-        transcriber: FasterWhisperTranscriber | None = None,
+        transcriber: Transcriber | None = None,
         analyzer: AnalysisBackend | None = None,
     ) -> None:
         self._settings = settings
         self._transcriber = transcriber or FasterWhisperTranscriber(settings)
         self._analyzer = analyzer or build_analysis_backend(settings)
 
-    def process(self, source: Path, output_dir: Path) -> ProcessingResult:
+    def process(self, source: MediaSource, output_dir: Path) -> ProcessingResult:
         started = time.perf_counter()
-        source = validate_source_file(source, self._settings.max_source_bytes)
+        logger.info("processing_started source=%r", source.filename)
         self._settings.prepare_directories()
         output_dir.mkdir(parents=True, exist_ok=True)
 
         with managed_work_directory(self._settings.temp_dir) as work_dir:
-            duration = probe_duration(source, self._settings)
-            audio_path = work_dir / "normalized.wav"
-            normalize_audio(source, audio_path, self._settings)
-            transcription = self._transcriber.transcribe(audio_path, duration)
+            with source.materialize(work_dir) as local_path:
+                duration = probe_duration(local_path, self._settings)
+                audio_path = work_dir / "normalized.wav"
+                normalize_audio(local_path, audio_path, self._settings)
+                transcription = self._transcriber.transcribe(audio_path, duration)
 
         _atomic_write_text(output_dir / "transcript.txt", transcription.transcript + "\n")
-        analysis = self._analyzer.analyze(transcription.transcript, source.name)
+        analysis = self._analyzer.analyze(transcription.transcript, source.filename)
 
-        filename_date = parse_filename_date(source.name)
+        filename_date = parse_filename_date(source.filename)
         if filename_date is not None:
             presentation_date = filename_date
             presentation_date_source = PresentationDateSource.FILENAME
@@ -57,7 +57,7 @@ class VideoProcessor:
             presentation_date_source = PresentationDateSource.UNKNOWN
 
         result = ProcessingResult(
-            source_filename=source.name,
+            source_filename=source.filename,
             presentation_date=presentation_date,
             presentation_date_source=presentation_date_source,
             title=analysis.result.title,
@@ -71,6 +71,19 @@ class VideoProcessor:
         _atomic_write_text(
             output_dir / "result.json",
             result.model_dump_json(indent=2) + "\n",
+        )
+        logger.info(
+            "processing_completed source=%r duration_seconds=%.3f "
+            "transcription_seconds=%.3f realtime_factor=%.4f total_seconds=%.3f "
+            "device=%s compute_type=%s warnings=%d",
+            result.source_filename,
+            result.transcription.duration_seconds,
+            result.transcription.processing_seconds,
+            result.transcription.realtime_factor,
+            result.total_processing_seconds,
+            result.transcription.device,
+            result.transcription.compute_type,
+            len(result.warnings),
         )
         return result
 

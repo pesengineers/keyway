@@ -4,7 +4,7 @@ import logging
 import time
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, Protocol
 
 from app.config import Settings
 from app.models import TranscriptionMetadata
@@ -21,6 +21,12 @@ class TranscriptionOutput:
     transcript: str
     metadata: TranscriptionMetadata
     warnings: list[str]
+
+
+class Transcriber(Protocol):
+    def transcribe(
+        self, audio_path: Path, duration_seconds: float
+    ) -> TranscriptionOutput: ...
 
 
 class FasterWhisperTranscriber:
