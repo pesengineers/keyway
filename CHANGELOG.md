@@ -10,6 +10,7 @@
 - Publish `ghcr.io/pesengineers/keyway` from GitHub Actions on every push to `main`; Unraid pulls the image instead of building on the host.
 - Add `scripts/New-KeywayGraphApp.ps1` to create the least-privilege Entra app (`Sites.Selected`) for SharePoint access, and `scripts/bench.sh` for on-host end-to-end benchmarks.
 - Add `AGENTS.md`, `docs/runbook.md`, and `docs/decisions/` for handover.
+- Return HTTP 422 with a distinct message when a recording contains no speech (`NoSpeechDetected`), so orchestrators can park silent files instead of retrying; consolidate error-to-status mapping in `_to_http()`.
 
 ## 0.1.0 - 2026-09-05
 

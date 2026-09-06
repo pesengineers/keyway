@@ -18,7 +18,9 @@ from app.media import MediaError, validate_http_source
 from app.models import ProcessingResult
 from app.pipeline import VideoProcessor
 from app.sources import LocalMediaSource, SharePointMediaSource, SourceError
-from app.transcription import TranscriptionError
+from app.transcription import NoSpeechDetected, TranscriptionError
+
+logger = logging.getLogger(__name__)
 
 
 class LocalProcessRequest(BaseModel):
@@ -96,20 +98,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                     media_source,
                     output_dir,
                 )
-            except MediaError as exc:
-                raise HTTPException(
-                    status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
-                    detail=str(exc),
-                ) from exc
-            except AnalysisError as exc:
-                raise HTTPException(
-                    status_code=status.HTTP_502_BAD_GATEWAY, detail=str(exc)
-                ) from exc
-            except TranscriptionError as exc:
-                raise HTTPException(
-                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                    detail=str(exc),
-                ) from exc
+            except Exception as exc:
+                raise _to_http(exc) from exc
 
     @application.post("/v1/process/sharepoint", response_model=ProcessingResult)
     async def process_sharepoint(
@@ -148,27 +138,37 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                     media_source,
                     output_dir,
                 )
-            except SourceError as exc:
-                raise HTTPException(
-                    status_code=status.HTTP_502_BAD_GATEWAY,
-                    detail=f"SharePoint source failed: {exc}",
-                ) from exc
-            except MediaError as exc:
-                raise HTTPException(
-                    status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
-                    detail=str(exc),
-                ) from exc
-            except AnalysisError as exc:
-                raise HTTPException(
-                    status_code=status.HTTP_502_BAD_GATEWAY, detail=str(exc)
-                ) from exc
-            except TranscriptionError as exc:
-                raise HTTPException(
-                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                    detail=str(exc),
-                ) from exc
+            except Exception as exc:
+                raise _to_http(exc) from exc
 
     return application
+
+
+def _to_http(exc: Exception) -> HTTPException:
+    """Map pipeline failures to HTTP status codes n8n can branch on.
+
+    422: the input itself is the problem (bad media, no speech); retrying will
+         not help.
+    502: an upstream dependency failed (SharePoint, analysis backend); retry
+         is reasonable.
+    500: something inside the worker failed.
+    """
+    if isinstance(exc, NoSpeechDetected):
+        return HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, detail=str(exc))
+    if isinstance(exc, MediaError):
+        return HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, detail=str(exc))
+    if isinstance(exc, SourceError):
+        return HTTPException(
+            status.HTTP_502_BAD_GATEWAY, detail=f"SharePoint source failed: {exc}"
+        )
+    if isinstance(exc, AnalysisError):
+        return HTTPException(status.HTTP_502_BAD_GATEWAY, detail=str(exc))
+    if isinstance(exc, TranscriptionError):
+        return HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc))
+    logger.exception("Unhandled processing failure")
+    return HTTPException(
+        status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal processing failure"
+    )
 
 
 def _readiness_problems(settings: Settings) -> list[str]:

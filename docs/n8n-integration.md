@@ -154,6 +154,20 @@ On `HTTP 200`, Keyway returns:
 
 ---
 
+### Error responses
+
+Non-200 responses are `{"detail": "<message>"}`. The status code tells the workflow what to do; set the HTTP Request node to "Continue on error" and branch on `$json.statusCode` (or the error output).
+
+| Status | Meaning | Workflow action |
+|---|---|---|
+| 400 | Request rejected before processing (path outside allowed roots, bad `job_id`) | fix the workflow; do not retry |
+| 422 | The media itself is the problem: unsupported container, ffmpeg cannot decode it, or **no speech detected** (silent recording) | mark the row terminal (e.g. `no_audio` / `unprocessable`) with the `detail` text; do not retry |
+| 502 | An upstream dependency failed: SharePoint/Graph download or the analysis backend (Ollama) | mark `error`, increment `attemptCount`, retry on the next cycle |
+| 500 | Worker fault (CUDA crash, unexpected exception) | mark `error`, retry once; alert if it repeats |
+| 503 | `/ready` failing: worker misconfigured or a mount is unwritable | stop the loop; operator attention |
+
+The 422 for silence is deliberate: the first queue item tested (`Non-Technical-20251022_155731UTC-Meeting Recording.mp4`) is 50 s of digital silence (max volume -91 dB). Retrying it forever would be wasteful; a distinct status lets the workflow park it for a human.
+
 ## 5. Sample n8n Workflow Sequence
 
 ```mermaid

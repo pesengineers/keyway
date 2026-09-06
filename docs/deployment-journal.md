@@ -4,7 +4,7 @@ This journal tracks all completed, in-progress, and pending operational tasks ac
 
 ---
 
-- **Phase**: Go-live (Issue #7) in progress. Image now published to `ghcr.io/pesengineers/keyway:latest` by CI and pulled by Unraid; on-host build path retired. Entra app "Keyway Video Worker" registered (`Sites.Selected`, read on the CE site). Next: create the `keyway` Docker container in the Unraid GUI with the template values in runbook 1.8 and the Graph secret as a masked variable, verify `/ready` from n8n, run one real Graph download from the queue, then draft the new n8n workflow.
+- **Phase**: **Keyway service is live on `pes-dev`** (container `keyway`, GHCR image, `keyway-net`, P2000, Ollama backend, Graph source). End-to-end SharePoint → Keyway → Ollama verified on a real queued item. Remaining for Issue #7: rotate the Graph secret (echoed once in the Unraid Apply output), then build the new n8n workflow (design in `docs/n8n-integration.md`).
 - **Target Host**: `pes-dev.pes.local` (`192.168.76.42`), Unraid kernel `6.12.85-Unraid`, Docker `29.3.1`, `nvidia` runtime registered.
 - **SSH access**: working as `root` via `~/.ssh/id_ed25519` (`SHA256:TBb1nZ...`); local `~/.ssh/config` has a `pes-dev` host alias. The 1Password `pes-dev` key (`SHA256:4u7fD7/...`) is also authorized for interactive use.
 - **GPU inventory (host)**:
@@ -72,6 +72,13 @@ This journal tracks all completed, in-progress, and pending operational tasks ac
 ## Session Activity Log
 
 
+### 2026-09-06 (service container live, Graph path proven)
+- User created the `keyway` container in the Unraid GUI; first Apply failed because each host path had a leading space (Docker read them as volume names). Unraid had still saved `my-keyway.xml` to flash. Backed it up (`.bak.<ts>`), stripped the spaces with `sed`, added Support/Project/Icon links. Started the container from the template's values (secret read from the XML on-host, never transmitted). Runbook 1.8 now lists both pitfalls.
+- Verified: `docker exec n8n wget http://keyway:8000/ready` returns ready; CUDA device count 1 inside the container; `GRAPH_*` configured.
+- **Graph smoke 1** (`Non-Technical-20251022_155731UTC-Meeting Recording.mp4`, 6.5 MB): OAuth + download + ffmpeg succeeded, Whisper found no speech. ffprobe/volumedetect confirmed the file is 50 s of digital silence (max -91 dB). Keyway was correct to fail it.
+- **Graph smoke 2** (`Create Revit Titleblock Family From Cad Border File.mp4`, 30 MB, 15 min): HTTP 200 in 71 s, cuda/float32, 48.8 s transcription, `safe` with grounded reason, temp clean. This is the first full production-path run.
+- Code change from smoke 1: new `NoSpeechDetected` (subclass of `TranscriptionError`) mapped to **HTTP 422** so n8n can park silent recordings instead of retrying; error-to-status mapping factored into `_to_http()` and covered by `tests/test_error_mapping.py`. Status-code contract documented in `docs/n8n-integration.md` §4.
+- **Action required:** the Graph client secret was printed in plaintext by Unraid's Apply output and pasted into chat. Rotate with `New-KeywayGraphApp.ps1 -RotateSecret`, update the masked variable, delete the old secret in Entra.
 ### 2026-09-06 (GHCR publishing, Graph app registration)
 - Added `.github/workflows/publish-image.yml`: on push to `main` run tests, build `linux/amd64`, push `ghcr.io/pesengineers/keyway:latest` and `main-<sha>`; `v*` tags publish semver. First run (`3a665ed`) green in 4.5 min.
 - Package was created private and the org policy blocked public packages. User enabled public package creation at the org level, then flipped the package to public. Token needed `read:packages` for the API to even see the package (`write:packages` alone returns 404). All recorded in runbook 3.6.

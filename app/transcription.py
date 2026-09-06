@@ -16,6 +16,14 @@ class TranscriptionError(RuntimeError):
     pass
 
 
+class NoSpeechDetected(TranscriptionError):
+    """The media decoded fine but contained no recognizable speech.
+
+    Distinct from TranscriptionError so callers can treat it as a terminal
+    outcome (e.g. a dead-mic recording) rather than a retryable failure.
+    """
+
+
 @dataclass(frozen=True)
 class TranscriptionOutput:
     transcript: str
@@ -59,7 +67,9 @@ class FasterWhisperTranscriber:
                 ) from fallback_exc
 
         if not transcript:
-            raise TranscriptionError("Transcription completed without detecting speech")
+            raise NoSpeechDetected(
+                "No speech detected in the audio track; the recording may be silent"
+            )
 
         realtime_factor = (
             processing_seconds / duration_seconds if duration_seconds > 0 else 0.0
