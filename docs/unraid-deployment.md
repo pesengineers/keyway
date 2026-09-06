@@ -149,6 +149,44 @@ Transcript agreement: float32 vs int8 differed by a handful of punctuation/word 
 
 **Recommendation:** keep `WHISPER_COMPUTE_TYPE=auto` (float32) for maximum fidelity; VRAM headroom is ample (1.5 of 5 GB). Set `WHISPER_COMPUTE_TYPE=int8_float32` if the P2000 must be shared with other workloads (halves VRAM, ~10 percent faster, negligible accuracy cost). The GPU is roughly 2.5x faster than the host's 24 Xeon cores and 8x faster than the dev laptop. Larger models (`medium.en`, ~1.5 GB fp32 weights) would fit in VRAM if accuracy needs increase.
 
+## Local analysis with Ollama (installed 2026-09-06)
+
+Keyway is one container. Analysis runs in a second, separately managed container installed from **Community Apps** (`ollama/ollama`, official image) so transcripts never leave the host. Both containers share the P2000 sequentially: Whisper releases VRAM when a job ends and Ollama unloads its model after `OLLAMA_KEEP_ALIVE`.
+
+Template values used on `pes-dev` (Community Apps > Ollama):
+
+| Setting | Value | Reason |
+|---|---|---|
+| Name | `ollama` | Keyway reaches it as `http://ollama:11434` |
+| Network Type | `keyway-net` (custom bridge, created with `docker network create keyway-net`) | private to Keyway and n8n |
+| `NVIDIA_VISIBLE_DEVICES` | `GPU-a16c6467-c3d8-cf56-6944-a53de59dcd6b` | P2000 only |
+| `NVIDIA_DRIVER_CAPABILITIES` | `compute,utility` | |
+| Extra Parameters (Advanced View) | `--runtime=nvidia` | required for the NVIDIA variables to take effect |
+| `OLLAMA_KEEP_ALIVE` | `2m` | frees VRAM promptly between jobs |
+| Appdata | `/mnt/user/appdata/ollama` → `/root/.ollama` | model store (~2 GB for llama3.2:3b) |
+| Port | template publishes `11434` on the host; **remove** before production so Ollama is reachable only from `keyway-net` |
+
+Keyway environment for this backend:
+
+```dotenv
+ANALYSIS_BACKEND=ollama
+ANALYSIS_BASE_URL=http://ollama:11434
+ANALYSIS_MODEL=llama3.2:3b
+ANALYSIS_TIMEOUT_SECONDS=600
+```
+
+Pull the model once from the host: `docker exec ollama ollama pull llama3.2:3b`.
+
+### Validated result on the sample video
+
+End-to-end on the P2000 with `llama3.2:3b`: 41.1 s transcription, 13.0 s analysis, **62.3 s total** for 56.5 min of media. Peak VRAM 4.1 GB with both Whisper (float32) and the 3B model resident, so the 5 GB card has headroom but not enough for a 7B/8B model at the same time. The model produced a correct `safe` classification with a grounded reason and a usable title and synopsis for a Revit/Dynamo training session.
+
+If a larger model is wanted later: set `WHISPER_COMPUTE_TYPE=int8_float32` (Whisper drops to ~0.75 GB) and keep `OLLAMA_KEEP_ALIVE` short, or run Ollama on CPU.
+
+### Ollama-specific gotcha
+
+Ollama compiles the JSON schema in `format` into a llama.cpp grammar. `minLength`/`maxLength` on strings expand to one grammar rule per character and fail with HTTP 400 `failed to parse grammar`. Keyway therefore sends Ollama a schema without length bounds (`_OLLAMA_SCHEMA` in `app/analysis.py`); Pydantic still enforces every bound on the response.
+
 ## Validation after storm recovery
 
 1. Confirm `/health` and `/ready` return 200.

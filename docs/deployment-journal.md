@@ -4,7 +4,7 @@ This journal tracks all completed, in-progress, and pending operational tasks ac
 
 ---
 
-- **Phase**: All five phases complete. Issue #3 closed 2026-09-06. Next: production deployment of the service container (n8n network attach, `.env` with real analysis credentials), tracked as a new issue.
+- **Phase**: All five phases complete. Ollama companion container installed on `pes-dev` via Community Apps and validated end to end on the P2000 (2026-09-06). Remaining go-live work tracked in Issue #7: attach n8n to `keyway-net`, start the Keyway service container, choose the media source, remove Ollama's published host port.
 - **Target Host**: `pes-dev.pes.local` (`192.168.76.42`), Unraid kernel `6.12.85-Unraid`, Docker `29.3.1`, `nvidia` runtime registered.
 - **SSH access**: working as `root` via `~/.ssh/id_ed25519` (`SHA256:TBb1nZ...`); local `~/.ssh/config` has a `pes-dev` host alias. The 1Password `pes-dev` key (`SHA256:4u7fD7/...`) is also authorized for interactive use.
 - **GPU inventory (host)**:
@@ -72,6 +72,12 @@ This journal tracks all completed, in-progress, and pending operational tasks ac
 ## Session Activity Log
 
 
+### 2026-09-06 (Ollama companion container)
+- Decision: analysis runs fully on-host in a second container (`ollama/ollama` from Community Apps) rather than a cloud API. Keyway remains a single container; the Ollama client already existed.
+- Created private network `keyway-net` on the host. User installed Ollama through the CA template: name `ollama`, network `keyway-net`, `NVIDIA_VISIBLE_DEVICES` pinned to the P2000 UUID, `--runtime=nvidia`, `OLLAMA_KEEP_ALIVE=2m`, appdata `/mnt/user/appdata/ollama`. Template also published host port 11434; flagged for removal in Issue #7.
+- Verified Ollama 0.33.3 sees only the P2000 and answers at `http://ollama:11434` on `keyway-net`. Pulled `llama3.2:3b` (2.0 GB).
+- **Bug found and fixed (`c1677ce`):** first end-to-end run failed with HTTP 400 from Ollama: `failed to parse grammar`. Cause: `maxLength: 2000` in the JSON schema expands to thousands of llama.cpp grammar rules. Keyway now sends Ollama a schema without string length bounds; Pydantic still validates them. Test added.
+- Second run succeeded: 41.1 s transcription (cuda/float32) + 13.0 s analysis = 62.3 s total; peak VRAM 4.1 GB with both models resident. Output: title "Review of SCS Presentation on Revit and Dynamo", sensitivity `safe`, grounded reason. Model cache confirmed in `/models` (464 MB) after the image path-default fix. Scratch directory removed; `ollama` container left running.
 ### 2026-09-06 (Phase 1 - Unraid deployment and P2000 benchmark)
 - Created keyway directories on `pes-dev` (checked for pre-existence first; none existed). Cloned repo to `/mnt/user/appdata/keyway/src` and built `keyway:local` on the host (4.5 min).
 - **Hardware finding:** the P2000 is Pascal and CTranslate2 exposes no `float16` for it (only `float32`, `int8`, `int8_float32`). The previous `auto` logic hard-coded `float16` for CUDA and would have silently fallen back to CPU. Fixed in commit `094867f`: `auto` now queries `get_supported_compute_types("cuda")` and prefers `float16` > `int8_float16` > `float32`. Tests added for Pascal and Turing+ cases.
