@@ -72,6 +72,10 @@ This journal tracks all completed, in-progress, and pending operational tasks ac
 ## Session Activity Log
 
 
+### 2026-09-06 (secret rotated, container updated)
+- User ran `New-KeywayGraphApp.ps1 -RotateSecret` (script fixed in `245e653` so `-SiteId` is not required for rotation) and updated the masked template variable. While editing, the GUI still showed leading spaces in the three path fields: each `<Config>` stores the value twice (`Default=` attribute and element text) and my earlier sed had fixed only the attribute. User cleaned them; template verified with zero leading-space values. Runbook updated.
+- Verified the rotated secret end to end (OAuth + Graph download succeeded on the known-silent item). Old secret can now be deleted in Entra.
+- Pulled the `314281a` image (`9c4019c5`) and recreated `keyway` from its template; healthy, `/ready` OK from n8n, and the silent item now returns **HTTP 422** with the new message. Removed smoke-test output directories.
 ### 2026-09-06 (n8n workflow created)
 - Built `Keyway - Process Queue` (`mp5gviKuHu9iIfPo`) via the MCP `create_workflow_from_code` tool from `n8n/keyway-process-queue.workflow.ts`, following the server's required sequence (SDK reference, node type lookup, `validate_workflow`, create). Created inactive; frozen workflows untouched.
 - 15 nodes: schedule (15 min) → Config → get one `pending` row → loop → mark `processing` → POST Keyway (`fullResponse`+`neverError`) → route on HTTP status (200/422/other) → for 200 route on sensitivity → PATCH SharePoint only for `safe` → mark `done`/`flagged_internal`/`flagged_review`/`unprocessable`/`error`. Reuses credential `Sharepoint video process` (`icIlll1oh3FEHtYl`). Verified connections and credential assignment via `get_workflow_details`.

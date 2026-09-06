@@ -1,10 +1,10 @@
 # Status: resume here
 
-Last updated 2026-09-06 (end of session; n8n workflow created). This is the single page to read before doing anything. It states the exact state of every system Keyway touches, what is done, what is next, and what is unresolved. The chronological record is `docs/deployment-journal.md`; this page is the snapshot.
+Last updated 2026-09-06 (late session). This is the single page to read before doing anything. It states the exact state of every system Keyway touches, what is done, what is next, and what is unresolved. The chronological record is `docs/deployment-journal.md`; this page is the snapshot.
 
 ## One-paragraph summary
 
-Keyway is deployed and working on the production Unraid host `pes-dev`. A real SharePoint video was pulled through Microsoft Graph, transcribed on the Quadro P2000, analyzed by a local Ollama model, and returned as structured JSON in 71 seconds. All six original GitHub issues are closed. The n8n workflow that feeds Keyway from the existing 100-item queue exists (`Keyway - Process Queue`, inactive, source in `n8n/`). What remains is operational: rotate one leaked secret, pick up the latest image, run the workflow once by hand, then activate it.
+Keyway is deployed and working on the production Unraid host `pes-dev`, on the current image, with a rotated Graph secret. Real SharePoint videos have been pulled through Microsoft Graph, transcribed on the Quadro P2000, analyzed by a local Ollama model, and returned as structured JSON. All six original GitHub issues are closed. The n8n workflow that feeds Keyway from the existing 100-item queue exists (`Keyway - Process Queue`, inactive, source in `n8n/`). The only remaining step before production is to run that workflow once by hand and activate it.
 
 ## State of each system
 
@@ -21,12 +21,12 @@ Keyway is deployed and working on the production Unraid host `pes-dev`. A real S
 |---|---|
 | SSH | `ssh pes-dev` works from this workstation (alias in `~/.ssh/config`, key `~/.ssh/id_ed25519`). 1Password `pes-dev` key also authorized. Details: `docs/unraid-deployment.md` "SSH access". |
 | Network `keyway-net` | exists; members: `keyway`, `ollama`, `n8n` |
-| Container `keyway` | **running, healthy**, image `ghcr.io/pesengineers/keyway:latest` pulled at 06:14 UTC (commit `dfbe1ad` era; does **not** yet include the 422/`NoSpeechDetected` change from `314281a`). No host port. Template on flash: `/boot/config/plugins/dockerMan/templates-user/my-keyway.xml` (+ a `.bak` from before the path fix). |
+| Container `keyway` | **running, healthy**, image `ghcr.io/pesengineers/keyway:latest` = `9c4019c5` (commit `314281a`, includes the 422/`NoSpeechDetected` behavior; verified). No host port. Template on flash: `/boot/config/plugins/dockerMan/templates-user/my-keyway.xml` (+ a `.bak` from before the path fix). |
 | Container `ollama` | running, `ollama/ollama` 0.33.3, model `llama3.2:3b` pulled, pinned to P2000, no host port, `OLLAMA_KEEP_ALIVE=2m` |
 | Container `n8n` | untouched except for the added `keyway-net` attachment |
 | GPUs | P2000 = `GPU-a16c6467-c3d8-cf56-6944-a53de59dcd6b` (index 1, target). P620 = `GPU-588d1004-...` (index 0, not exposed to anything of ours) |
 | `/mnt/user/appdata/keyway/models` | 464 MB, `small.en` cached |
-| `/mnt/user/appdata/keyway/output` | `graph-smoke-1/` (empty, silent file) and `graph-smoke-2/` (transcript + result of the Revit tutorial). Safe to delete; they were tests. |
+| `/mnt/user/appdata/keyway/output` | empty; smoke-test outputs removed |
 | `/mnt/cache/keyway/tmp` | empty (correct) |
 | `/mnt/user/appdata/keyway/src` | removed; no longer used |
 | Leftovers | `/root/.ssh/authorized_keys.bak.*` and `.broken` from the SSH setup; harmless |
@@ -53,13 +53,11 @@ Keyway is deployed and working on the production Unraid host `pes-dev`. A real S
 
 ## Unresolved items, in priority order
 
-1. **Rotate the Graph client secret.** Unraid printed the full `docker run` (with the secret) on Apply and it was pasted into a chat transcript. Run `.\scripts\New-KeywayGraphApp.ps1 -RotateSecret`, put the new value in the `keyway` template's `GRAPH_CLIENT_SECRET`, Apply, then delete the old secret in Entra (App registrations > Keyway Video Worker > Certificates & secrets). Runbook 1.7b and 1.8.
-2. **Update the running container** to the image from `314281a` (CI is green): Docker tab, Check for Updates, Apply on `keyway`. This brings the 422-for-silence behavior the workflow depends on.
-3. **Test and activate the Keyway workflow.** Open https://n8n.pesengineers.dev/workflow/mp5gviKuHu9iIfPo, confirm the SharePoint node shows credential `Sharepoint video process`, execute once manually, check that the oldest pending row becomes `done` (or `flagged_*`/`unprocessable`) and that the SharePoint item's Title/Synopsis were written. Then activate. Checklist in `docs/n8n-integration.md` §6. Consider a new seed workflow later that pages Graph and skips items already queued. The frozen workflows stay untouched.
-4. **Delete the smoke-test output** directories under `/mnt/user/appdata/keyway/output/` when convenient.
-5. **Analysis quality on real content is a known unknown.** Two real items look good (`safe`, sensible titles). The synthetic eval set is small. After the first 10 to 20 real jobs, review `result.json` files; if titles/sensitivity are weak, try `llama3.1:8b` with `WHISPER_COMPUTE_TYPE=int8_float32` (VRAM budget in ADR 003).
-6. **Date inference will dominate.** Only 6 of 100 filenames carry a leading date; expect `presentation_date_source` to be `model` or `unknown` for most. Decide whether SharePoint's `Presentation_x0020_Date` should be left blank when `unknown`.
-7. Minor: Ollama template still declares `OLLAMA_ORIGINS=*` (CORS; irrelevant with no host port). n8n is on both `bridge` and `keyway-net`; that is intended.
+1. **Test and activate the Keyway workflow.** Open https://n8n.pesengineers.dev/workflow/mp5gviKuHu9iIfPo, confirm the SharePoint node shows credential `Sharepoint video process`, execute once manually, check that the oldest pending row becomes `done` (or `flagged_*`/`unprocessable`) and that the SharePoint item's Title/Synopsis were written. Then activate. Checklist in `docs/n8n-integration.md` §6. Consider a new seed workflow later that pages Graph and skips items already queued. The frozen workflows stay untouched.
+2. **Delete the old Graph secret in Entra** if not already done (App registrations > Keyway Video Worker > Certificates & secrets; keep only `keyway-20260906`). The rotated secret is verified working.
+3. **Analysis quality on real content is a known unknown.** Two real items look good (`safe`, sensible titles). The synthetic eval set is small. After the first 10 to 20 real jobs, review `result.json` files; if titles/sensitivity are weak, try `llama3.1:8b` with `WHISPER_COMPUTE_TYPE=int8_float32` (VRAM budget in ADR 003).
+4. **Date inference will dominate.** Only 6 of 100 filenames carry a leading date; expect `presentation_date_source` to be `model` or `unknown` for most. Decide whether SharePoint's `Presentation_x0020_Date` should be left blank when `unknown`.
+5. Minor: Ollama template still declares `OLLAMA_ORIGINS=*` (CORS; irrelevant with no host port). n8n is on both `bridge` and `keyway-net`; that is intended.
 
 ## How to verify the system is healthy right now
 
