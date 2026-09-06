@@ -85,11 +85,24 @@ class FasterWhisperTranscriber:
         except Exception:
             return "cpu"
 
+    _CUDA_COMPUTE_PREFERENCE = ("float16", "int8_float16", "float32")
+
     def _resolve_compute_type(self, device: str) -> str:
         configured = self._settings.whisper_compute_type.lower()
         if configured != "auto":
             return configured
-        return "float16" if device == "cuda" else "int8"
+        if device != "cuda":
+            return "int8"
+        try:
+            import ctranslate2
+
+            supported = set(ctranslate2.get_supported_compute_types("cuda"))
+        except Exception:
+            return "float32"
+        for candidate in self._CUDA_COMPUTE_PREFERENCE:
+            if candidate in supported:
+                return candidate
+        return "float32"
 
     def _transcribe_once(
         self, audio_path: Path, device: str, compute_type: str
