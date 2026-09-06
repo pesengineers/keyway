@@ -26,9 +26,14 @@ RUN groupadd --gid 10001 worker \
     && mkdir -p /models /media /output /tmp/keyway \
     && chown -R worker:worker /models /output /tmp/keyway
 
+# Application path defaults match the declared volumes so a bare `docker run`
+# never writes models or artifacts into the temp mount or the container layer.
 ENV HOME=/tmp/keyway \
     HF_HOME=/models \
-    TMPDIR=/tmp/keyway
+    TMPDIR=/tmp/keyway \
+    MODEL_CACHE_DIR=/models \
+    TEMP_DIR=/tmp/keyway \
+    OUTPUT_DIR=/output
 
 USER worker
 VOLUME ["/models", "/output", "/tmp/keyway"]

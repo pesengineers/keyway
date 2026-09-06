@@ -105,10 +105,17 @@ docker run --rm \
 
 ## NVIDIA run
 
-Find stable GPU UUIDs with `nvidia-smi -L`. Select the Quadro P2000 by UUID rather than assuming index 0; indices can change across boots. Unraid's container template can set the NVIDIA runtime and `NVIDIA_VISIBLE_DEVICES` to that P2000 UUID. Equivalent CLI:
+Find stable GPU UUIDs with `nvidia-smi -L`. Select the Quadro P2000 by UUID rather than index; on `pes-dev` the P2000 is **index 1** (the P620 is index 0), so an index-based selection would pick the wrong card. Unraid's container template can set the NVIDIA runtime and `NVIDIA_VISIBLE_DEVICES` to that P2000 UUID. Equivalent CLI:
+
+On `pes-dev` the UUIDs are:
+
+| GPU | Index | VRAM | UUID |
+|---|---|---|---|
+| Quadro P2000 (target) | 1 | 5120 MiB | `GPU-a16c6467-c3d8-cf56-6944-a53de59dcd6b` |
+| Quadro P620 (do not expose) | 0 | 2048 MiB | `GPU-588d1004-5969-03a5-2096-6fc9c4091e9a` |
 
 ```console
-docker run --rm --gpus '"device=GPU-REPLACE_WITH_P2000_UUID"' \
+docker run --rm --gpus '"device=GPU-a16c6467-c3d8-cf56-6944-a53de59dcd6b"' \
   --env-file .env \
   -v /mnt/user/training-videos:/media:ro \
   -v /mnt/user/appdata/keyway/models:/models \
@@ -117,7 +124,7 @@ docker run --rm --gpus '"device=GPU-REPLACE_WITH_P2000_UUID"' \
   ghcr.io/pesengineers/keyway:latest
 ```
 
-Leave `WHISPER_DEVICE=auto` and `WHISPER_COMPUTE_TYPE=auto`; the expected selected values are `cuda` and `float16`. The P620 should not be exposed to this container. GPU selection remains deployment configuration, not application logic.
+Leave `WHISPER_DEVICE=auto` and `WHISPER_COMPUTE_TYPE=auto`. The P2000 is a Pascal part (compute capability 6.1) and CTranslate2 reports only `float32`, `int8`, and `int8_float32` for it; there is no `float16`. `auto` therefore resolves to `cuda` / `float32` on this host (the app queries `ctranslate2.get_supported_compute_types("cuda")` and picks the first of `float16`, `int8_float16`, `float32`). The P620 should not be exposed to this container. GPU selection remains deployment configuration, not application logic.
 
 The NVIDIA 580.159.03 driver is new enough for the container's CUDA 12 runtime. The image includes cuBLAS and cuDNN 9 required by current CTranslate2.
 
@@ -125,9 +132,26 @@ The NVIDIA 580.159.03 driver is new enough for the container's CUDA 12 runtime. 
 
 Prefer a user-defined Docker network shared only with n8n. Do not publish port 8000. n8n can call `http://keyway:8000/v1/process/local` after both containers mount the same video path. If a host port is needed for diagnostics, bind only `127.0.0.1:8000`.
 
+## Benchmark results (2026-09-06, Issue #3)
+
+Host `pes-dev`, driver 580.159.03, image `keyway:local` built from commit `094867f`, model `small.en`, sample `2021-08-19 12.01 P_T (SCS).mp4` (3393.8 s of media, ~7 min of speech after VAD). Each run is a full `keyway process` including model load; "transcribe" is the faster-whisper phase only.
+
+| Config | Device | Compute type | Transcribe (s) | RTF | Total (s) | Peak VRAM (MiB) | Notes |
+|---|---|---|---|---|---|---|---|
+| auto (cold) | cuda | float32 | 48.6 | 0.0143 | 56.7 | 1575 | includes first model download |
+| float32 | cuda | float32 | 40.1 | 0.0118 | 47.8 | 1543 | |
+| int8_float32 | cuda | int8_float32 | 36.4 | 0.0107 | 43.9 | 743 | |
+| int8 | cuda | int8 | 36.6 | 0.0108 | 44.9 | 743 | |
+| CPU baseline | cpu | int8 | 93.8 | 0.0276 | 102.8 | n/a | 2x E5-2670 v3, default threads |
+| Dev laptop (reference) | cpu | int8 | 294.0 | 0.0866 | 306.7 | n/a | Core Ultra 7 155H, earlier session |
+
+Transcript agreement: float32 vs int8 differed by a handful of punctuation/word tokens (1005 vs 1004 words); GPU vs CPU differed slightly more (135 word-level diff lines) but all were semantically equivalent.
+
+**Recommendation:** keep `WHISPER_COMPUTE_TYPE=auto` (float32) for maximum fidelity; VRAM headroom is ample (1.5 of 5 GB). Set `WHISPER_COMPUTE_TYPE=int8_float32` if the P2000 must be shared with other workloads (halves VRAM, ~10 percent faster, negligible accuracy cost). The GPU is roughly 2.5x faster than the host's 24 Xeon cores and 8x faster than the dev laptop. Larger models (`medium.en`, ~1.5 GB fp32 weights) would fit in VRAM if accuracy needs increase.
+
 ## Validation after storm recovery
 
 1. Confirm `/health` and `/ready` return 200.
 2. Process one known short file and confirm `transcription.device` is `cuda`.
-3. Benchmark the representative video on the P2000 and record processing time, realtime factor, peak VRAM, driver, and image digest.
-4. Confirm temporary job directories disappear after both successful and deliberately failed processing.
+3. Benchmark the representative video on the P2000 and record processing time, realtime factor, peak VRAM, driver, and image digest. Done 2026-09-06; see table above.
+4. Confirm temporary job directories disappear after both successful and deliberately failed processing. Verified: `/mnt/cache/keyway/tmp/keyway/` was empty after all five runs.

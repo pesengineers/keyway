@@ -4,7 +4,7 @@ This journal tracks all completed, in-progress, and pending operational tasks ac
 
 ---
 
-- **Phase**: Phase 1 active (Unraid deployment). Phases 2 through 5 complete.
+- **Phase**: All five phases complete. Issue #3 closed 2026-09-06. Next: production deployment of the service container (n8n network attach, `.env` with real analysis credentials), tracked as a new issue.
 - **Target Host**: `pes-dev.pes.local` (`192.168.76.42`), Unraid kernel `6.12.85-Unraid`, Docker `29.3.1`, `nvidia` runtime registered.
 - **SSH access**: working as `root` via `~/.ssh/id_ed25519` (`SHA256:TBb1nZ...`); local `~/.ssh/config` has a `pes-dev` host alias. The 1Password `pes-dev` key (`SHA256:4u7fD7/...`) is also authorized for interactive use.
 - **GPU inventory (host)**:
@@ -21,13 +21,14 @@ This journal tracks all completed, in-progress, and pending operational tasks ac
 - [X] **Step 1.1**: Test SSH connectivity and authentication to `pes-dev.pes.local`.
 - [X] **Step 1.2**: Run `nvidia-smi -L` to capture Quadro P2000 GPU UUID (distinguish from P620 and ignore GRID K2).
 - [X] **Step 1.3**: Verify driver version (expected 580.159.03) and Docker NVIDIA runtime setup on host.
-- [ ] **Step 1.4**: Check and prepare directories:
-  - `/mnt/user/appdata/keyway/models`
-  - `/mnt/cache/keyway/tmp`
-  - `/mnt/user/appdata/keyway/output`
-- [ ] **Step 1.5**: Build / pull / transfer container image and compose configuration.
-- [ ] **Step 1.6**: Run sample video benchmark on Quadro P2000 with `small.en` and compare with CPU INT8 baseline (294s transcription / 0.0866 RTF).
-- [ ] **Step 1.7**: Document benchmark results (duration, transcription time, RTF, peak VRAM, GPU UUID) and close Issue #3 on GitHub.
+- [X] **Step 1.4**: Check and prepare directories:
+  - `/mnt/user/appdata/keyway/models` (owner 10001:10001)
+  - `/mnt/cache/keyway/tmp` (owner 10001:10001)
+  - `/mnt/user/appdata/keyway/output` (owner 10001:10001)
+  - `/mnt/user/appdata/keyway/src` (git clone of the repo, used for on-host builds)
+- [X] **Step 1.5**: Built `keyway:local` on the host from the cloned repo (no registry needed). Image 5.45 GB.
+- [X] **Step 1.6**: Benchmarked `small.en` on the P2000 in float32, int8_float32, int8, plus host CPU int8. Results in `docs/unraid-deployment.md`.
+- [X] **Step 1.7**: Documented results, GPU UUIDs, and compute-type recommendation; closed Issue #3.
 
 ---
 
@@ -70,6 +71,13 @@ This journal tracks all completed, in-progress, and pending operational tasks ac
 
 ## Session Activity Log
 
+
+### 2026-09-06 (Phase 1 - Unraid deployment and P2000 benchmark)
+- Created keyway directories on `pes-dev` (checked for pre-existence first; none existed). Cloned repo to `/mnt/user/appdata/keyway/src` and built `keyway:local` on the host (4.5 min).
+- **Hardware finding:** the P2000 is Pascal and CTranslate2 exposes no `float16` for it (only `float32`, `int8`, `int8_float32`). The previous `auto` logic hard-coded `float16` for CUDA and would have silently fallen back to CPU. Fixed in commit `094867f`: `auto` now queries `get_supported_compute_types("cuda")` and prefers `float16` > `int8_float16` > `float32`. Tests added for Pascal and Turing+ cases.
+- **Deployment bug found:** with only `HF_HOME=/models` set, the app's own `MODEL_CACHE_DIR` defaulted to `~/.cache/huggingface` inside the temp mount, so 464 MB of weights landed in `/mnt/cache/keyway/tmp/.cache`. Fixed by baking `MODEL_CACHE_DIR`, `TEMP_DIR`, `OUTPUT_DIR` defaults into the image. The stray weights in `/mnt/cache/keyway/tmp/.cache` were removed; the model will re-download once into `/models` on first production run.
+- Benchmark rig (private `keyway-bench` network, mock analysis container, sample video under `/mnt/cache/keyway/bench`) was torn down after the runs. Retained: image, source clone, empty runtime directories.
+- Benchmark headline: GPU float32 40.1 s transcription for 56.5 min of media (RTF 0.0118, 1.5 GB peak VRAM) vs 93.8 s on the host CPU and 294 s on the dev laptop. See `docs/unraid-deployment.md` for the full table and recommendation.
 ### 2026-09-05
 
 ### Phase 1 Block Reason
