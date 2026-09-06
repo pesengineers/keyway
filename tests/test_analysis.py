@@ -46,6 +46,7 @@ def test_openai_compatible_backend_uses_structured_output() -> None:
             "sensitivity",
             "sensitivity_reason",
             "presentation_date",
+            "presentation_date_evidence",
         }
         content = json.dumps(
             {
@@ -93,6 +94,7 @@ def test_ollama_backend_uses_format_schema() -> None:
             "sensitivity",
             "sensitivity_reason",
             "presentation_date",
+            "presentation_date_evidence",
         }
         content = json.dumps(
             {
@@ -122,7 +124,60 @@ def test_ollama_backend_uses_format_schema() -> None:
 
     assert output.result.title == "Local Ollama Analysis"
     assert output.result.sensitivity is Sensitivity.INTERNAL_ONLY
-    assert str(output.result.presentation_date) == "2023-05-10"
+    # Date came back without evidence in the transcript: discarded, not trusted.
+    assert output.result.presentation_date is None
+    assert any("presentation_date discarded" in w for w in output.warnings)
+
+
+def _openai_backend_returning(payload: dict) -> OpenAICompatibleAnalysisBackend:
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            200, json={"choices": [{"message": {"content": json.dumps(payload)}}]}
+        )
+
+    settings = Settings(
+        _env_file=None, analysis_api_key="k", analysis_base_url="https://x.example/v1"
+    )
+    return OpenAICompatibleAnalysisBackend(settings, transport=httpx.MockTransport(handler))
+
+
+_BASE = {
+    "title": "Wood Design Update",
+    "synopsis": "Spreadsheet changes.",
+    "sensitivity": "safe",
+    "sensitivity_reason": "No listed category was present.",
+}
+
+
+def test_date_kept_when_evidence_is_verbatim_in_transcript() -> None:
+    transcript = "Welcome everyone, today is November 18th, 2021 and we're covering wood."
+    backend = _openai_backend_returning(
+        {**_BASE, "presentation_date": "2021-11-18",
+         "presentation_date_evidence": "today is November 18th, 2021"}
+    )
+    out = backend.analyze(transcript, "x.mp4")
+    assert str(out.result.presentation_date) == "2021-11-18"
+    assert out.warnings == []
+
+
+def test_date_discarded_when_evidence_not_in_transcript() -> None:
+    transcript = "Welcome everyone, we're covering wood spreadsheets this session."
+    backend = _openai_backend_returning(
+        {**_BASE, "presentation_date": "2023-10-01",
+         "presentation_date_evidence": "the October 2023 release"}
+    )
+    out = backend.analyze(transcript, "x.mp4")
+    assert out.result.presentation_date is None
+    assert out.result.presentation_date_evidence is None
+    assert any("discarded" in w for w in out.warnings)
+
+
+def test_date_discarded_when_evidence_missing() -> None:
+    backend = _openai_backend_returning(
+        {**_BASE, "presentation_date": "2023-10-01", "presentation_date_evidence": None}
+    )
+    out = backend.analyze("no dates here at all", "x.mp4")
+    assert out.result.presentation_date is None
 
 
 def test_build_analysis_backend_selects_ollama() -> None:

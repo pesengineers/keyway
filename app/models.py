@@ -28,6 +28,7 @@ class AnalysisResult(StrictModel):
     sensitivity: Sensitivity
     sensitivity_reason: str = Field(min_length=1, max_length=1_000)
     presentation_date: date | None = None
+    presentation_date_evidence: str | None = None
 
 
 class TranscriptionMetadata(StrictModel):

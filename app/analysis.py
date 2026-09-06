@@ -92,7 +92,7 @@ class OpenAICompatibleAnalysisBackend:
             content = response.json()["choices"][0]["message"]["content"]
         except (ValueError, KeyError, IndexError, TypeError) as exc:
             raise AnalysisError("Analysis API returned an unexpected response shape") from exc
-        return AnalysisOutput(parse_analysis_content(content), warnings)
+        return AnalysisOutput(*_finalize(content, transcript, warnings))
 
 
 class OllamaAnalysisBackend:
@@ -153,7 +153,7 @@ class OllamaAnalysisBackend:
             content = response.json()["message"]["content"]
         except (ValueError, KeyError, IndexError, TypeError) as exc:
             raise AnalysisError("Analysis API returned an unexpected response shape") from exc
-        return AnalysisOutput(parse_analysis_content(content), warnings)
+        return AnalysisOutput(*_finalize(content, transcript, warnings))
 
 
 def build_analysis_backend(settings: Settings) -> AnalysisBackend:
@@ -175,6 +175,26 @@ def parse_analysis_content(content: str) -> AnalysisResult:
         return AnalysisResult.model_validate(data)
     except (json.JSONDecodeError, ValidationError) as exc:
         raise AnalysisError("Analysis response was not valid structured output") from exc
+
+
+def _finalize(
+    content: str, transcript: str, warnings: list[str]
+) -> tuple[AnalysisResult, list[str]]:
+    """Parse the model output and strip any presentation_date that is not backed
+    by evidence found verbatim in the transcript. LLMs of every size invent
+    plausible dates for a date-typed field; the filename or 'unknown' is safer."""
+    result = parse_analysis_content(content)
+    if result.presentation_date is None:
+        return result, warnings
+    evidence = (result.presentation_date_evidence or "").strip()
+    if len(evidence) >= 4 and _normalize(evidence) in _normalize(transcript):
+        return result, warnings
+    warnings = [*warnings, "Model-inferred presentation_date discarded: no supporting text in transcript"]
+    return result.model_copy(update={"presentation_date": None, "presentation_date_evidence": None}), warnings
+
+
+def _normalize(text: str) -> str:
+    return " ".join(text.lower().split())
 
 
 def _limit_transcript(transcript: str, max_characters: int) -> tuple[str, list[str]]:
@@ -215,7 +235,11 @@ rule exactly:
 sensitivity_reason: at most two sentences. If not "safe", quote or closely paraphrase the
 specific passage that triggered it. If "safe", state that no listed category was present.
 
-presentation_date: only a date explicitly stated in the material, as YYYY-MM-DD; else null.
+presentation_date: the date the session was held, as YYYY-MM-DD, ONLY if the transcript
+itself states it (for example "today is March 3rd 2022" or "our November 18th meeting").
+Otherwise null. Never guess from context, topics, or product versions.
+presentation_date_evidence: the exact words from the transcript you took the date from,
+copied verbatim (5 to 15 words). null when presentation_date is null.
 """
 
 _ANALYSIS_SCHEMA = {
@@ -234,6 +258,7 @@ _ANALYSIS_SCHEMA = {
             "maxLength": 1000,
         },
         "presentation_date": {"type": ["string", "null"], "format": "date"},
+        "presentation_date_evidence": {"type": ["string", "null"]},
     },
     "required": [
         "title",
@@ -241,6 +266,7 @@ _ANALYSIS_SCHEMA = {
         "sensitivity",
         "sensitivity_reason",
         "presentation_date",
+        "presentation_date_evidence",
     ],
 }
 
@@ -260,6 +286,7 @@ _OLLAMA_SCHEMA = {
         },
         "sensitivity_reason": {"type": "string"},
         "presentation_date": {"type": ["string", "null"]},
+        "presentation_date_evidence": {"type": ["string", "null"]},
     },
     "required": _ANALYSIS_SCHEMA["required"],
 }
