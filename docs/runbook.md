@@ -96,6 +96,41 @@ host$ /mnt/user/appdata/keyway/src/scripts/bench.sh gpu-auto "/mnt/cache/keyway/
 
 Expected on the P2000 for a ~1 h video: `device: cuda`, `compute_type: float32`, transcription ~40 s, total ~60 s, peak VRAM ~4 GB (Whisper + 3B model resident). Then `rm -rf /mnt/cache/keyway/bench`.
 
+### 1.7b Entra app registration for SharePoint access (Graph source only)
+
+Needed for `POST /v1/process/sharepoint`. Skip if using a local mount. Repeatable; safe to re-run.
+
+Prerequisites: Windows PowerShell 5.1 or 7 with `Install-Module Microsoft.Graph -Scope CurrentUser`; an account that is Global Administrator or Application Administrator and can grant admin consent (the site grant additionally needs SharePoint admin rights, which the delegated `Sites.FullControl.All` scope requires at sign-in).
+
+```powershell
+dev> .\scripts\New-KeywayGraphApp.ps1 -SiteId "pes1852.sharepoint.com,97c4bdef-10db-4a0a-b359-050ced66dd51,316269b2-8c0d-438a-9466-a3a1f9800a8a"
+```
+
+What it does, in order, each step skipped if already true:
+
+1. Signs in interactively (browser) and creates application **Keyway Video Worker** (single tenant) plus its service principal.
+2. Declares Microsoft Graph application permission **`Sites.Selected`** and grants admin consent programmatically (an app-role assignment, so nothing to click in the portal).
+3. Grants the app **`read`** on the one SharePoint site (`/sites/{id}/permissions`). With `Sites.Selected` the app can see no other site in the tenant.
+4. Creates a client secret (365 days) only if none is live, and writes it to `%USERPROFILE%\.keyway\graph-client-secret.txt` with an owner-only ACL. It is never printed. Put it in 1Password immediately, then delete the file.
+5. Prints the `GRAPH_TENANT_ID` / `GRAPH_CLIENT_ID` values for the Keyway container.
+
+Options:
+
+- `-TenantWide`: use `Files.Read.All` instead of `Sites.Selected` (read access to every site; only if the site grant is not possible).
+- `-RotateSecret`: add a new secret alongside the existing one. Deploy the new value to Keyway, verify, then remove the old secret in the portal (App registrations > Keyway Video Worker > Certificates & secrets).
+- `-WhatIf`: show every step without changing anything.
+
+Verify the grant without Keyway:
+
+```powershell
+dev> $t = (Invoke-RestMethod -Method Post -Uri "https://login.microsoftonline.com/<tenant>/oauth2/v2.0/token" -Body @{client_id="<client>";client_secret=(Get-Content "$env:USERPROFILE\.keyway\graph-client-secret.txt");scope="https://graph.microsoft.com/.default";grant_type="client_credentials"}).access_token
+dev> Invoke-RestMethod -Headers @{Authorization="Bearer $t"} "https://graph.microsoft.com/v1.0/sites/<siteId>/drives" | % value | select name,id
+```
+
+A drive list means the app can read the library. A 403 means the site grant is missing (step 3) or consent has not propagated yet (wait a minute and retry).
+
+Secret expiry is in 365 days from creation; put a calendar reminder at 11 months. Where secrets live is listed in section 4.
+
 ### 1.8 Run the service
 
 Not yet done on `pes-dev` (tracked in issue #7). When ready, either add a Docker template in the GUI mirroring this, or:
@@ -219,7 +254,7 @@ Ollama: update via the Unraid Docker tab like any CA container; model files pers
 | Unraid root SSH | 1Password "pes-dev" (agent) + workstation `~/.ssh/id_ed25519` | humans, agents |
 | n8n MCP token | 1Password "n8n PES Dev API Key"; env `N8N_PES_MCP_API_Key` | `.omp/mcp.json` |
 | OpenAI key (if used) | env `ANALYSIS_API_KEY` on the Keyway container | `app/analysis.py` |
-| Graph app secret (if used) | env `GRAPH_CLIENT_SECRET` on the Keyway container | `app/sources.py` |
+| Graph app secret ("Keyway Video Worker", Sites.Selected) | created by `scripts/New-KeywayGraphApp.ps1`; store in 1Password; env `GRAPH_CLIENT_SECRET` on the Keyway container; expires 365 days after creation | `app/sources.py` |
 | SharePoint Graph creds for n8n | n8n credential store | existing workflows |
 
 None of these belong in git. `.env` is ignored; if a secret is ever committed, rotate it, do not just delete the commit.

@@ -18,5 +18,5 @@ Sources implement the `MediaSource` protocol in `app/sources.py` and are limited
 ## Consequences
 
 - No URL parameter exists anywhere in the API.
-- The SharePoint path needs an Entra app registration with `Sites.Read.All` or `Files.Read.All`; not yet provisioned (issue #7). The local-mount path needs the library synced or shared onto the host.
+- The SharePoint path uses an Entra app registration ("Keyway Video Worker") with `Sites.Selected` and a `read` grant on the single Continuing Education site, created by `scripts/New-KeywayGraphApp.ps1` (runbook 1.7b). `Files.Read.All` is the documented fallback, not the default. The local-mount path would instead need the library synced or shared onto the host.
 - Both sources feed the same `VideoProcessor`; adding a third source is one class, not a pipeline change.

@@ -17,6 +17,7 @@ Keep the service on a private Docker network shared with n8n. The compose exampl
 - **Deterministic Lifecycle Cleanup**: Temporary audio WAVs and downloaded media binaries are managed with context managers and deleted in `finally` blocks upon success, failure, or timeout.
 - **Atomic Artifact Writes**: Results (`transcript.txt`, `result.json`) are written to hidden temporary files before atomic filesystem rename (`os.replace`), preventing partial reads by downstream pollers.
 - **Container Hardening**: Container executes as unprivileged user `worker` (UID/GID 10001), drops `ALL` Linux capabilities, blocks privilege escalation (`no-new-privileges`), and mounts root filesystem as read-only.
+- **Least-privilege SharePoint identity**: the Graph app ("Keyway Video Worker") holds only `Sites.Selected` with a `read` grant on the single Continuing Education site. It cannot list or read any other site, and it has no write permission anywhere. Provisioned and re-verifiable with `scripts/New-KeywayGraphApp.ps1`; secret lifetime 365 days.
 
 ## Operational requirements
 
