@@ -123,7 +123,7 @@ class OllamaAnalysisBackend:
                     ),
                 },
             ],
-            "format": _ANALYSIS_SCHEMA,
+            "format": _OLLAMA_SCHEMA,
             "stream": False,
         }
         endpoint = f"{self._settings.analysis_base_url.rstrip('/')}/api/chat"
@@ -231,4 +231,24 @@ _ANALYSIS_SCHEMA = {
         "sensitivity_reason",
         "presentation_date",
     ],
+}
+
+# Ollama compiles JSON Schema into a llama.cpp grammar. String length bounds
+# expand into one grammar rule per character and exceed its repetition limit
+# (HTTP 400 "failed to parse grammar"), so they are stripped here. Pydantic
+# still enforces every bound when the response is validated.
+_OLLAMA_SCHEMA = {
+    "type": "object",
+    "additionalProperties": False,
+    "properties": {
+        "title": {"type": "string"},
+        "synopsis": {"type": "string"},
+        "sensitivity": {
+            "type": "string",
+            "enum": ["safe", "internal_only", "review_required"],
+        },
+        "sensitivity_reason": {"type": "string"},
+        "presentation_date": {"type": ["string", "null"]},
+    },
+    "required": _ANALYSIS_SCHEMA["required"],
 }

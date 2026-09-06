@@ -84,6 +84,9 @@ def test_ollama_backend_uses_format_schema() -> None:
         assert payload["model"] == "llama3.2:latest"
         assert payload["stream"] is False
         assert "properties" in payload["format"]
+        # llama.cpp grammar compiler rejects string length bounds (HTTP 400)
+        for prop in payload["format"]["properties"].values():
+            assert not {"minLength", "maxLength", "format"} & prop.keys()
         assert set(payload["format"]["required"]) == {
             "title",
             "synopsis",
