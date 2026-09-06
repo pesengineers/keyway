@@ -4,17 +4,23 @@ This journal tracks all completed, in-progress, and pending operational tasks ac
 
 ---
 
-- **Phase**: Phase 1 blocked on SSH authentication; proceeding to Phase 2 (Ollama Backend, Issue #1).
-- **Target Host**: `pes-dev.pes.local` (`192.168.76.42`)
-- **Status**: Host is online and responds to HTTP/HTTPS. SSH port 22 is open, but neither `id_ed25519` nor `id_rsa_wdc-apps` keys are authorized for `root` or `dailen` (password/interactive authentication required or key needs to be loaded to `/root/.ssh/authorized_keys` on Unraid).
+- **Phase**: Phase 1 active (Unraid deployment). Phases 2 through 5 complete.
+- **Target Host**: `pes-dev.pes.local` (`192.168.76.42`), Unraid kernel `6.12.85-Unraid`, Docker `29.3.1`, `nvidia` runtime registered.
+- **SSH access**: working as `root` via `~/.ssh/id_ed25519` (`SHA256:TBb1nZ...`); local `~/.ssh/config` has a `pes-dev` host alias. The 1Password `pes-dev` key (`SHA256:4u7fD7/...`) is also authorized for interactive use.
+- **GPU inventory (host)**:
+  - index 0: Quadro P620, 2048 MiB, `GPU-588d1004-5969-03a5-2096-6fc9c4091e9a` (do not use)
+  - index 1: Quadro P2000, 5120 MiB, `GPU-a16c6467-c3d8-cf56-6944-a53de59dcd6b` (target)
+  - Driver 580.159.03. The P2000 is index 1, not 0; always select by UUID.
+- **Existing containers**: `n8n` (bridge network), Cloudflared tunnel, UptimeKuma, docker-socket-proxy, opsi stack. Keyway must not be attached to the tunnel or published beyond a private network.
+- **Storage**: `/mnt/user/appdata` (1.2T free), `/mnt/cache` (198G free). No `keyway` directories exist yet.
 
 ---
 
 ## 1. Unraid Deployment & Quadro P2000 Benchmark (Issue #3)
 
-- [ ] **Step 1.1**: Test SSH connectivity and authentication to `pes-dev.pes.local`.
-- [ ] **Step 1.2**: Run `nvidia-smi -L` to capture Quadro P2000 GPU UUID (distinguish from P620 and ignore GRID K2).
-- [ ] **Step 1.3**: Verify driver version (expected 580.159.03) and Docker NVIDIA runtime setup on host.
+- [X] **Step 1.1**: Test SSH connectivity and authentication to `pes-dev.pes.local`.
+- [X] **Step 1.2**: Run `nvidia-smi -L` to capture Quadro P2000 GPU UUID (distinguish from P620 and ignore GRID K2).
+- [X] **Step 1.3**: Verify driver version (expected 580.159.03) and Docker NVIDIA runtime setup on host.
 - [ ] **Step 1.4**: Check and prepare directories:
   - `/mnt/user/appdata/keyway/models`
   - `/mnt/cache/keyway/tmp`
