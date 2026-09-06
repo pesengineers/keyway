@@ -1,0 +1,13 @@
+{
+  "$schema": "https://raw.githubusercontent.com/can1357/oh-my-pi/main/packages/coding-agent/src/config/mcp-schema.json",
+  "mcpServers": {
+    "n8n-pesdev": {
+      "type": "http",
+      "url": "https://n8n.pesengineers.dev/mcp-server/http",
+      "headers": {
+        "Authorization": "Bearer ${N8N_PES_MCP_API_Key}"
+      },
+      "timeout": 60000
+    }
+  }
+}

@@ -4,6 +4,43 @@ This guide describes the architecture and configuration for orchestrating Keyway
 
 ---
 
+## 0. The live instance (surveyed 2026-09-06, read-only)
+
+- **n8n** 2.37.10 in container `n8n` on `pes-dev`, published at `https://n8n.pesengineers.dev` through the Cloudflared tunnel. Attached to both `bridge` and `keyway-net`.
+- **Agent access** is via n8n's built-in MCP server at `https://n8n.pesengineers.dev/mcp-server/http` (bearer token in env `N8N_PES_MCP_API_Key`, 1Password "n8n PES Dev API Key"). `.omp/mcp.json` registers it as `n8n-pesdev`. It exposes 39 tools including workflow search/details/history, execution search, data-table read/write, node discovery, and `create_workflow_from_code` / `publish_workflow`. Only workflows individually marked "Available in MCP" are visible.
+
+### Existing workflows: reference only, do not modify
+
+Two workflows implement the pre-Keyway design. They are **frozen**: do not edit, activate, execute, or publish them. Duplicate under a new name if a starting point is needed.
+
+| Workflow | ID | State | Notes |
+|---|---|---|---|
+| PES Video Metadata - Seed Queue | `QuB7hRjGqdnPGRnF` | inactive | Manual trigger. Lists a SharePoint drive folder via Graph (`$top=200`), filters to videos, inserts rows into data table `video_metadata_queue`. Last run 2026-09-05 succeeded (100 rows). |
+| PES Video Metadata - Process Queue | `84xNMHd9xDyKWgbd` | inactive, **never executed** | Every 15 min: take 5 `pending` rows, get drive item, if >24 MB send to CloudConvert for audio compression (poll twice), download, OpenAI Whisper API, gpt-4o-mini structured metadata, sensitivity branch, PATCH SharePoint list item, mark row done/error/flagged. |
+
+Useful shared pieces (copy, do not move):
+
+- **Data table** `video_metadata_queue` (id `QMOVCsZrJKJuT2Cz`, project `CdjCqhKMTfc43TGa`). Columns: `sourceItemId, driveItemId, fileName, webUrl, fileSizeBytes, status, title, presentationDate, synopsis, isSensitive, sensitivityReason, errorMessage, attemptCount, lastAttemptAt`. Status values used: `pending`, `done`, `error`, `flagged_sensitive`.
+- **Queue contents** at survey time: 100 rows, all `pending`, 26.2 GB total, largest 1.8 GB, 96 of 100 over the 24 MB API limit, 98 mp4 / 1 mkv / 1 wmv. Only 6 of 100 filenames start with `YYYY-MM-DD`, so model-inferred dates will be the common case and `presentation_date_source` will usually be `model` or `unknown`.
+- **SharePoint target** (Config node): site `pes1852.sharepoint.com,97c4bdef-10db-4a0a-b359-050ced66dd51,316269b2-8c0d-438a-9466-a3a1f9800a8a`, list `d5aef84f-d0e2-4a89-873c-7c9db6b6e059`, library "PES Documents / Continuing Education / Recordings & Video User Guides". Fields written: `Title`, `Synopsis` (truncated to 255 chars for the column), `Presentation_x0020_Date` as `YYYY-MM-DDT00:00:00Z`.
+- **Graph auth** for reads and the PATCH uses n8n's stored credential; Keyway does not need it for the local-mount flow.
+
+### What Keyway replaces
+
+In Process Queue, everything between "Get Drive Item Info" and "Parse Metadata Response" (compression decision, CloudConvert create/poll/download, Whisper API, gpt-4o-mini, parse) collapses into one HTTP Request node calling Keyway. The queue, loop, error/flag marking, and SharePoint PATCH stay as they are. Field mapping from Keyway's response to the existing downstream nodes:
+
+| Existing expression | Keyway field |
+|---|---|
+| `title` | `title` |
+| `synopsis` | `synopsis` (n8n still truncates to 255 for SharePoint) |
+| `presentationDate` | `presentation_date` (may be null; also `presentation_date_source`) |
+| `isSensitive` | `sensitivity != "safe"` (or route the three values separately) |
+| `sensitivityReason` | `sensitivity_reason` |
+
+Keyway adds `transcription.*` telemetry and `warnings`, which have no column today; consider adding `processingSeconds` and `device` to the data table in the new workflow.
+
+---
+
 ## 1. Architectural Boundary
 
 n8n serves as the **orchestrator and business logic layer**:

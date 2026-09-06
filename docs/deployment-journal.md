@@ -4,7 +4,7 @@ This journal tracks all completed, in-progress, and pending operational tasks ac
 
 ---
 
-- **Phase**: All five phases complete. Ollama companion container installed on `pes-dev` via Community Apps and validated end to end on the P2000 (2026-09-06). Remaining go-live work tracked in Issue #7: attach n8n to `keyway-net`, start the Keyway service container, choose the media source, remove Ollama's published host port.
+- **Phase**: All five phases complete; Ollama companion validated; n8n attached to `keyway-net`; agent access to n8n established via MCP. Repo now carries `AGENTS.md`, `docs/runbook.md`, and `docs/decisions/` so a colleague or agent can rebuild and operate everything. Remaining go-live work in Issue #7 (start the Keyway service container, media source decision, new n8n workflow).
 - **Target Host**: `pes-dev.pes.local` (`192.168.76.42`), Unraid kernel `6.12.85-Unraid`, Docker `29.3.1`, `nvidia` runtime registered.
 - **SSH access**: working as `root` via `~/.ssh/id_ed25519` (`SHA256:TBb1nZ...`); local `~/.ssh/config` has a `pes-dev` host alias. The 1Password `pes-dev` key (`SHA256:4u7fD7/...`) is also authorized for interactive use.
 - **GPU inventory (host)**:
@@ -72,6 +72,12 @@ This journal tracks all completed, in-progress, and pending operational tasks ac
 ## Session Activity Log
 
 
+### 2026-09-06 (n8n access and repo handover)
+- `docker network connect keyway-net n8n` (n8n now on `bridge` + `keyway-net`; verified it reaches `http://ollama:11434`). No restart, no other change to n8n.
+- n8n's built-in MCP server (`https://n8n.pesengineers.dev/mcp-server/http`, n8n MCP Server 1.1.0) verified with the token in env `N8N_PES_MCP_API_Key` (1Password "n8n PES Dev API Key"). Registered as `n8n-pesdev` in committed `.omp/mcp.json` via `${N8N_PES_MCP_API_Key}`; no secret in the repo. 39 tools available including write operations.
+- **Rule adopted (ADR 005):** the existing `PES Video Metadata - Seed Queue` / `Process Queue` workflows and the populated `video_metadata_queue` table are frozen reference. Only read-only MCP tools were used in this session.
+- Read-only survey results recorded in `docs/n8n-integration.md` section 0: 100 pending rows, 26.2 GB, 96/100 over the 24 MB API limit, 6/100 leading-date filenames, Process Queue never executed, SharePoint site/list IDs and field names, and the Keyway field mapping that replaces the CloudConvert/Whisper/gpt-4o-mini branch.
+- Added `AGENTS.md` (entry point and hard rules), `docs/runbook.md` (rebuild, change, operate, repair, decommission), `docs/decisions/001-005`, `scripts/bench.sh` (the benchmark harness used for Issue #3, now Ollama-based), Graph vars in `.env.example`, README pointers.
 ### 2026-09-06 (Ollama companion container)
 - Decision: analysis runs fully on-host in a second container (`ollama/ollama` from Community Apps) rather than a cloud API. Keyway remains a single container; the Ollama client already existed.
 - Created private network `keyway-net` on the host. User installed Ollama through the CA template: name `ollama`, network `keyway-net`, `NVIDIA_VISIBLE_DEVICES` pinned to the P2000 UUID, `--runtime=nvidia`, `OLLAMA_KEEP_ALIVE=2m`, appdata `/mnt/user/appdata/ollama`. Template initially published host port 11434; removed via the CA template (API Interface Port row) and verified: LAN connection refused, still reachable on `keyway-net`.
