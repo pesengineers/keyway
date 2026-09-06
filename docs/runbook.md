@@ -183,6 +183,11 @@ For a local-mount source instead of Graph: add path `/media` -> the video librar
 
 Secrets go in the template as variables, never in env files on disk and never in the repo. Rotating the Graph secret is: run `New-KeywayGraphApp.ps1 -RotateSecret`, update the variable in the template, Apply, then delete the old secret in Entra.
 
+Two Unraid GUI pitfalls seen on first creation:
+
+- A **leading space in a host path** field makes Docker treat it as a named volume and fail with `includes invalid characters for a local volume name`. Paths must start with `/`.
+- On Apply, Unraid prints the full `docker run` command **including masked variables in plaintext**. Do not copy that output into chat, tickets, or logs. If it leaks, rotate the secret.
+
 ### 1.9 Attach n8n
 
 Safe because: `network connect` adds a second interface without restarting the container or touching its existing bridge network.
