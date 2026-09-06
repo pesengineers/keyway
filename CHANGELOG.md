@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Discard model-supplied `presentation_date` unless the model's `presentation_date_evidence` appears verbatim in the transcript; schemas require the new field. Local and hosted models all fabricated dates otherwise.
+- Rewrite the analysis system prompt: sensitivity is release risk, default `safe`, technical depth and internal authorship are explicitly not signals, reason must cite the passage.
+- Production analysis backend switched to OpenRouter (`openai/gpt-4o-mini`) via the existing OpenAI-compatible client; Ollama retained as offline fallback (ADR 006).
+
 - Add Ollama analysis backend (`ANALYSIS_BACKEND=ollama`) using structured `format` output; no API key required.
 - Add constrained SharePoint source via Microsoft Graph (`POST /v1/process/sharepoint`) with streaming download, size cap, and cleanup.
 - Fix CUDA compute-type selection: `auto` now queries device capabilities instead of assuming `float16`; Pascal GPUs (Quadro P2000) resolve to `float32`.

@@ -19,6 +19,10 @@ Keep the service on a private Docker network shared with n8n. The compose exampl
 - **Container Hardening**: Container executes as unprivileged user `worker` (UID/GID 10001), drops `ALL` Linux capabilities, blocks privilege escalation (`no-new-privileges`), and mounts root filesystem as read-only.
 - **Least-privilege SharePoint identity**: the Graph app ("Keyway Video Worker") holds only `Sites.Selected` with a `read` grant on the single Continuing Education site. It cannot list or read any other site, and it has no write permission anywhere. Provisioned and re-verifiable with `scripts/New-KeywayGraphApp.ps1`; secret lifetime 365 days.
 
+## Data leaving the host
+
+Video and audio never leave `pes-dev`. The transcript text (roughly 5 KB per hour of speech) is sent to OpenRouter and onward to the selected model provider for the analysis step, over TLS, authenticated with the OpenRouter key. OpenRouter and OpenAI API terms exclude training on API data; OpenAI retains API inputs up to 30 days for abuse monitoring. This was judged acceptable for continuing-education content (ADR 006). Recordings that must not leave the host can be processed with `ANALYSIS_BACKEND=ollama` instead. Sensitivity classification happens after the transcript has been sent, so the API sees flagged content too; this is inherent to any remote classifier.
+
 ## Operational requirements
 
 Mount `/media` read-only. Mount writable storage at `/models`, `/output`, and `/tmp/keyway`; do not rely on the container writable layer. Restrict file permissions on transcript and result mounts because processed material may be sensitive. Rotate analysis credentials through Docker secrets or another secret-injection mechanism; never place a populated `.env` in Git.

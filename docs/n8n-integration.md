@@ -162,7 +162,7 @@ Non-200 responses are `{"detail": "<message>"}`. The status code tells the workf
 |---|---|---|
 | 400 | Request rejected before processing (path outside allowed roots, bad `job_id`) | fix the workflow; do not retry |
 | 422 | The media itself is the problem: unsupported container, ffmpeg cannot decode it, or **no speech detected** (silent recording) | mark the row terminal (e.g. `no_audio` / `unprocessable`) with the `detail` text; do not retry |
-| 502 | An upstream dependency failed: SharePoint/Graph download or the analysis backend (Ollama) | mark `error`, increment `attemptCount`, retry on the next cycle |
+| 502 | An upstream dependency failed: SharePoint/Graph download or the analysis backend (OpenRouter, or Ollama in fallback mode) | mark `error`, increment `attemptCount`, retry on the next cycle |
 | 500 | Worker fault (CUDA crash, unexpected exception) | mark `error`, retry once; alert if it repeats |
 | 503 | `/ready` failing: worker misconfigured or a mount is unwritable | stop the loop; operator attention |
 
@@ -224,6 +224,11 @@ With the MCP server (token in `N8N_PES_MCP_API_Key`):
 4. In the UI, open the workflow, check the SharePoint node still shows the credential, run once manually with the schedule disabled, inspect the row and the SharePoint item, then activate.
 
 SDK quirks learned: `sticky(text, nodes?, config?)` is positional, not `sticky({config})`; string concatenation with `+` is not folded, use one literal; the loop's `nextBatch(loop)` must terminate every branch.
+
+### First real runs (2026-09-06)
+
+- Execution 2500: Keyway returned 502 (`OAuth token request failed with HTTP 401`) because the Graph secret had just been deleted in Entra; the workflow correctly wrote `status=error` with the cause. Row 1.
+- Execution 2501: row 2 (`2021-11-18 12.02 P_T (SCS).mp4`, 37 min) processed in about 2.5 min; `llama3.2:3b` classified it `internal_only` for being "technical and specialized", which is wrong. The workflow correctly parked it as `flagged_internal` and did not write to SharePoint. This triggered the switch to OpenRouter (ADR 006). Rows 1 and 2 need `status` reset to `pending` to be reprocessed.
 
 ### Activation checklist
 

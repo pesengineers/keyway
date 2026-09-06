@@ -71,6 +71,15 @@ This journal tracks all completed, in-progress, and pending operational tasks ac
 
 ## Session Activity Log
 
+### 2026-09-06 (first workflow runs, analysis backend change)
+- Workflow execution 2500 hit 502: the Graph secret had been deleted in Entra between rotation and Apply (AADSTS7000215). Diagnosed by comparing template vs container value (identical) and requesting a token directly. User re-rotated; verified.
+- Execution 2501 processed row 2 end to end (37 min video, ~2.5 min) but `llama3.2:3b` returned `internal_only` reasoning that the content was "technical and specialized". Workflow correctly parked it as `flagged_internal`; nothing written to SharePoint.
+- Rewrote the prompt with an explicit default-safe rule (`7c53b37`). A/B on the saved transcript: 3b now `safe` but invented date 2023-03-01; `llama3.1:8b` still `internal_only` ("company-specific") and invented 2024-02-22; both also failed structured-output parsing once each. Conclusion: not a model-size problem.
+- Host briefly unreachable (ping loss, SSH timeout) for a few minutes during this work; came back on its own; uptime shows no reboot.
+- Decision (ADR 006): use OpenRouter with `openai/gpt-4o-mini` through the existing `openai` backend. User added the OpenRouter key to n8n credentials (`OpenRouter Dailen Personal`) and to the Keyway template as masked `ANALYSIS_API_KEY` plus the three `ANALYSIS_*` values. Verified in-container. A/B: `safe`, clean reason, good title/synopsis, 3.9 s; but date 2023-10-01 invented (transcript contains no date).
+- Added evidence gating (`124e067`): `presentation_date_evidence` required in both schemas; `_finalize()` drops the date unless the evidence string is found in the transcript, adding a warning. 42 tests. CI publishing.
+- Documentation updated across ADR 003/006, runbook (template, 2.3a A/B procedure, troubleshooting, secrets), architecture, security (data leaving host), n8n guide (first runs), STATUS, changelog.
+
 
 ### 2026-09-06 (secret rotated, container updated)
 - User ran `New-KeywayGraphApp.ps1 -RotateSecret` (script fixed in `245e653` so `-SiteId` is not required for rotation) and updated the masked template variable. While editing, the GUI still showed leading spaces in the three path fields: each `<Config>` stores the value twice (`Default=` attribute and element text) and my earlier sed had fixed only the attribute. User cleaned them; template verified with zero leading-space values. Runbook updated.

@@ -163,15 +163,18 @@ Variables. For `GRAPH_CLIENT_SECRET` set Display to Advanced and tick **Password
 |---|---|
 | `NVIDIA_VISIBLE_DEVICES` | `GPU-a16c6467-c3d8-cf56-6944-a53de59dcd6b` |
 | `NVIDIA_DRIVER_CAPABILITIES` | `compute,utility` |
-| `ANALYSIS_BACKEND` | `ollama` |
-| `ANALYSIS_BASE_URL` | `http://ollama:11434` |
-| `ANALYSIS_MODEL` | `llama3.2:3b` |
+| `ANALYSIS_BACKEND` | `openai` |
+| `ANALYSIS_BASE_URL` | `https://openrouter.ai/api/v1` |
+| `ANALYSIS_MODEL` | `openai/gpt-4o-mini` |
+| `ANALYSIS_API_KEY` | OpenRouter key from 1Password (masked) |
 | `ANALYSIS_TIMEOUT_SECONDS` | `600` |
 | `MAX_CONCURRENT_JOBS` | `1` |
 | `GRAPH_TENANT_ID` | `68e4d43b-0bf8-4363-8311-accdd3b62fa1` |
 | `GRAPH_CLIENT_ID` | `90f1c65f-3d78-4569-b11d-d2fd6b73ef50` |
 | `GRAPH_CLIENT_SECRET` | from 1Password (masked) |
 | `GRAPH_TIMEOUT_SECONDS` | `600` |
+
+To fall back to the local Ollama model (offline operation), set `ANALYSIS_BACKEND=ollama`, `ANALYSIS_BASE_URL=http://ollama:11434`, `ANALYSIS_MODEL=llama3.2:3b`, and remove `ANALYSIS_API_KEY`. Expect weaker sensitivity judgments (ADR 006).
 
 Leave `WHISPER_*`, `MODEL_CACHE_DIR`, `TEMP_DIR`, `OUTPUT_DIR` unset; the image defaults are correct. Apply, then verify from inside n8n:
 
@@ -224,11 +227,28 @@ To cut a release: `git tag vX.Y.Z && git push --tags`; the same workflow publish
 
 ### 2.3 Change the analysis model
 
+Default backend is OpenRouter; change `ANALYSIS_MODEL` in the template to any OpenRouter model id (https://openrouter.ai/models), Apply, then re-run `scripts/bench.sh` or the A/B procedure in 2.3a. For the Ollama fallback:
+
 ```sh
 host$ docker exec ollama ollama pull <model>
 ```
 
 then set `ANALYSIS_MODEL` on the Keyway container. VRAM budget: Whisper float32 ~1.5 GB + model. The 5 GB P2000 comfortably fits a 3B model; for 7B/8B set `WHISPER_COMPUTE_TYPE=int8_float32` (Whisper drops to ~0.75 GB) and keep `OLLAMA_KEEP_ALIVE` short. Re-run `scripts/bench.sh` and compare the analysis quality before committing to it.
+
+### 2.3a Compare analysis output without re-transcribing
+
+Saved transcripts live in `/mnt/user/appdata/keyway/output/<job>/transcript.txt`. Run the current prompt and backend against one from inside the container (uses the container's own `ANALYSIS_*` env):
+
+```sh
+host$ docker exec keyway python - /output/queue-2/transcript.txt <<'PY'
+import sys; from pathlib import Path
+from app.analysis import build_analysis_backend; from app.config import Settings
+p = Path(sys.argv[1]); r = build_analysis_backend(Settings()).analyze(p.read_text(), p.parent.name + '.mp4')
+print(r.result.model_dump_json(indent=1)); print(r.warnings)
+PY
+```
+
+This is how the 3b / 8b / gpt-4o-mini comparison in ADR 006 was done. Do it before changing a model or prompt in production.
 
 ### 2.4 Change the prompt or schema
 
@@ -264,6 +284,7 @@ host$ nvidia-smi                                             # both GPUs should 
 | Symptom | Cause | Fix |
 |---|---|---|
 | `/ready` 503 "analysis API key is not configured" | `ANALYSIS_BACKEND=openai` without a key | set the key or switch to `ollama` |
+| `Analysis API returned HTTP 401/402` with OpenRouter | key invalid, or account out of credit | check the key in the template and the OpenRouter dashboard |
 | `Analysis API returned HTTP 400` with Ollama | schema contains length bounds or an unsupported keyword | see 2.4; check `docker logs ollama` for `failed to parse grammar` |
 | `Analysis request timed out` | model cold-start or CPU fallback in Ollama | raise `ANALYSIS_TIMEOUT_SECONDS`; check `docker exec ollama nvidia-smi` shows the GPU |
 | `transcription.device` is `cpu` on the GPU host | container started without `--gpus`, or CUDA init failed and auto fell back | check `warnings` in `result.json`; `docker logs keyway` shows the CUDA error |
@@ -310,6 +331,7 @@ The workflow authenticates with the automatic `GITHUB_TOKEN` (`packages: write`)
 | Unraid root SSH | 1Password "pes-dev" (agent) + workstation `~/.ssh/id_ed25519` | humans, agents |
 | n8n MCP token | 1Password "n8n PES Dev API Key"; env `N8N_PES_MCP_API_Key` | `.omp/mcp.json` |
 | OpenAI key (if used) | env `ANALYSIS_API_KEY` on the Keyway container | `app/analysis.py` |
+| OpenRouter API key | 1Password; n8n credential `OpenRouter Dailen Personal` (not readable via API); masked variable `ANALYSIS_API_KEY` on the Keyway container | `app/analysis.py` |
 | Graph app secret ("Keyway Video Worker", Sites.Selected) | created by `scripts/New-KeywayGraphApp.ps1`; store in 1Password; env `GRAPH_CLIENT_SECRET` on the Keyway container; expires 365 days after creation | `app/sources.py` |
 | SharePoint Graph creds for n8n | n8n credential store | existing workflows |
 

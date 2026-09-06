@@ -1,6 +1,6 @@
 # 003: Analysis runs in a separate Ollama container on the same host
 
-**Date:** 2026-09-06. **Status:** accepted.
+**Date:** 2026-09-06. **Status:** superseded as the default by [006](006-analysis-via-openrouter.md) on the same day after local models misclassified the first real item; the Ollama container remains installed as the offline fallback.
 
 ## Context
 

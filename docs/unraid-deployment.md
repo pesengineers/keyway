@@ -149,7 +149,9 @@ Transcript agreement: float32 vs int8 differed by a handful of punctuation/word 
 
 **Recommendation:** keep `WHISPER_COMPUTE_TYPE=auto` (float32) for maximum fidelity; VRAM headroom is ample (1.5 of 5 GB). Set `WHISPER_COMPUTE_TYPE=int8_float32` if the P2000 must be shared with other workloads (halves VRAM, ~10 percent faster, negligible accuracy cost). The GPU is roughly 2.5x faster than the host's 24 Xeon cores and 8x faster than the dev laptop. Larger models (`medium.en`, ~1.5 GB fp32 weights) would fit in VRAM if accuracy needs increase.
 
-## Local analysis with Ollama (installed 2026-09-06)
+## Local analysis with Ollama (installed 2026-09-06; fallback since ADR 006)
+
+**Not the production path.** The Keyway template points at OpenRouter (runbook 1.8). Ollama stays installed, GPU-pinned, and ready; switch three variables to use it offline. Models present: `llama3.2:3b`, `llama3.1:8b`.
 
 Keyway is one container. Analysis runs in a second, separately managed container installed from **Community Apps** (`ollama/ollama`, official image) so transcripts never leave the host. Both containers share the P2000 sequentially: Whisper releases VRAM when a job ends and Ollama unloads its model after `OLLAMA_KEEP_ALIVE`.
 
