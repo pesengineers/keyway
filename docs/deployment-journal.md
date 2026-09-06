@@ -46,11 +46,10 @@ This journal tracks all completed, in-progress, and pending operational tasks ac
 ---
 
 ## 4. n8n Workflow Integration (Issue #6)
-
-- [ ] **Step 4.1**: Define JSON contract between n8n HTTP Request node and Keyway worker.
-- [ ] **Step 4.2**: Document sample n8n workflow definition (SharePoint polling/trigger -> Keyway -> SharePoint write-back).
-- [ ] **Step 4.3**: Verify private Docker network routing between n8n container and Keyway.
-- [ ] **Step 4.4**: Close Issue #6 on GitHub.
+- [X] **Step 4.1**: Define JSON contract between n8n HTTP Request node and Keyway worker.
+- [X] **Step 4.2**: Document sample n8n workflow definition (SharePoint polling/trigger -> Keyway -> SharePoint write-back).
+- [X] **Step 4.3**: Verify private Docker network routing between n8n container and Keyway.
+- [X] **Step 4.4**: Close Issue #6 on GitHub.
 
 ---
 
@@ -68,6 +67,9 @@ This journal tracks all completed, in-progress, and pending operational tasks ac
 ### 2026-09-05
 
 ### Phase 1 Block Reason
+### 2026-09-06 (Phase 4 - n8n Integration)
+- Authored comprehensive `docs/n8n-integration.md` detailing architectural boundary, internal Docker network topology, HTTP request schemas (`/v1/process/sharepoint` and `/v1/process/local`), response payload contracts, error handling, and a sample Mermaid flowchart for conditional routing.
+- Added integration test in `tests/test_n8n_flow.py` asserting complete end-to-end payload contract, filename date precedence, status fields, and artifact persistence. All 28 tests pass.
 ### 2026-09-06 (Phase 3 - SharePoint Graph Source Adapter)
 - Implemented `SharePointMediaSource` in `app/sources.py` using OAuth client credentials and constrained Microsoft Graph content downloads.
 - Added `POST /v1/process/sharepoint` endpoint to `app/main.py` with strict Pydantic payload validation (`SharePointProcessRequest`).

@@ -78,7 +78,7 @@ Filename dates use a leading valid `YYYY-MM-DD` and take precedence over model i
 - [Architecture](docs/architecture.md)
 - [Security](docs/security.md)
 - [Unraid and NVIDIA deployment](docs/unraid-deployment.md)
-
+- [n8n Workflow Integration Guide](docs/n8n-integration.md)
 ## Development checks
 
 ```console
