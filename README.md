@@ -80,6 +80,7 @@ Filename dates use a leading valid `YYYY-MM-DD` and take precedence over model i
 ## Documentation
 
 - [AGENTS.md](AGENTS.md): rules and orientation for humans and agents working on this repo
+- [Operations guide](docs/operations.md): day-to-day running for non-developers (statuses, weekly routine, resets, troubleshooting)
 - [Runbook](docs/runbook.md): rebuild from nothing, operate, repair, decommission
 - [Deployment journal](docs/deployment-journal.md): what has been done, when, and what is next
 - [Architecture](docs/architecture.md) and [decision records](docs/decisions/README.md)

@@ -339,8 +339,29 @@ const notes = sticky(
   { name: 'About This Workflow', color: 4 },
 );
 
+const notePickup = sticky(
+  '### 1. Pick up one row\nEvery 15 min. Takes the OLDEST row with status=pending (one at a time, because Keyway runs one job at a time).\n\nThe loop marks it `processing` first so a long job is never picked up twice.\n\nTo reprocess a row: use the **Keyway - Reset Queue Rows** form. Never edit statuses by hand in the table while this is active.',
+  [config, getPending, loop],
+  { name: 'Note: Pickup', color: 7 },
+);
+
+const noteCall = sticky(
+  '### 2. Call Keyway\nPOST http://keyway:8000/v1/process/sharepoint on the private keyway-net network. Keyway downloads the video from SharePoint itself, transcribes on the GPU, analyzes, and returns JSON.\n\nTypical time: ~1 min per hour of video + download. Timeout here is 30 min.\n\n`Full response` + `Never error` are ON so the HTTP status reaches the router instead of failing the node.',
+  [markProcessing, callKeyway],
+  { name: 'Note: Keyway Call', color: 7 },
+);
+
+const noteRouting = sticky(
+  '### 3. Route on result\n**HTTP status** (Keyway contract, docs/n8n-integration.md §4):\n- 200 → look at sensitivity\n- 422 → `unprocessable` (silent/undecodable; never retried)\n- other → `error` (fix cause, then reset the row)\n\n**Sensitivity** (only for 200):\n- safe → write Title/Synopsis/Date to SharePoint → `done`\n- internal_only → `flagged_internal` (nothing written)\n- review_required → `flagged_review` (nothing written)\n\nFlagged rows wait for a human. Transcript + result JSON for every job: /mnt/user/appdata/keyway/output/queue-<row id>/ on pes-dev.',
+  [routeStatus, routeSensitivity, markError],
+  { name: 'Note: Routing', color: 7 },
+);
+
 export default workflow('keyway-process-queue', 'Keyway - Process Queue')
   .add(notes)
+  .add(notePickup)
+  .add(noteCall)
+  .add(noteRouting)
   .add(every15)
   .to(config)
   .to(getPending)

@@ -15,13 +15,13 @@ Two workflows implement the pre-Keyway design. They are **frozen**: do not edit,
 
 | Workflow | ID | State | Notes |
 |---|---|---|---|
-| PES Video Metadata - Seed Queue | `QuB7hRjGqdnPGRnF` | inactive | Manual trigger. Lists a SharePoint drive folder via Graph (`$top=200`), filters to videos, inserts rows into data table `video_metadata_queue`. Last run 2026-09-05 succeeded (100 rows). |
+| PES Video Metadata - Seed Queue | `QuB7hRjGqdnPGRnF` | inactive | Manual trigger. Lists a SharePoint drive folder via Graph (`$top=200`), filters to videos, inserts rows into data table `video_metadata_queue`. Last run 2026-09-05 succeeded (281 rows). |
 | PES Video Metadata - Process Queue | `84xNMHd9xDyKWgbd` | inactive, **never executed** | Every 15 min: take 5 `pending` rows, get drive item, if >24 MB send to CloudConvert for audio compression (poll twice), download, OpenAI Whisper API, gpt-4o-mini structured metadata, sensitivity branch, PATCH SharePoint list item, mark row done/error/flagged. |
 
 Useful shared pieces (copy, do not move):
 
 - **Data table** `video_metadata_queue` (id `QMOVCsZrJKJuT2Cz`, project `CdjCqhKMTfc43TGa`). Columns: `sourceItemId, driveItemId, fileName, webUrl, fileSizeBytes, status, title, presentationDate, synopsis, isSensitive, sensitivityReason, errorMessage, attemptCount, lastAttemptAt`. Status values used: `pending`, `done`, `error`, `flagged_sensitive`.
-- **Queue contents** at survey time: 100 rows, all `pending`, 26.2 GB total, largest 1.8 GB, 96 of 100 over the 24 MB API limit, 98 mp4 / 1 mkv / 1 wmv. Only 6 of 100 filenames start with `YYYY-MM-DD`, so model-inferred dates will be the common case and `presentation_date_source` will usually be `model` or `unknown`.
+- **Queue contents** (recounted 2026-09-06 with paging; an earlier survey was capped at 100 rows by the API default): **281 rows**, all `pending`, **82.2 GB** total, largest 3.09 GB, median 235 MB, 272 of 281 over the 24 MB API limit, 276 mp4 / 4 wmv / 1 mkv, one zero-byte file. Only 6 of 281 filenames start with `YYYY-MM-DD`; with evidence-gated dates most rows will end with `presentation_date_source=unknown` and no SharePoint date written.
 - **SharePoint target** (Config node): site `pes1852.sharepoint.com,97c4bdef-10db-4a0a-b359-050ced66dd51,316269b2-8c0d-438a-9466-a3a1f9800a8a`, list `d5aef84f-d0e2-4a89-873c-7c9db6b6e059`, library "PES Documents / Continuing Education / Recordings & Video User Guides". Fields written: `Title`, `Synopsis` (truncated to 255 chars for the column), `Presentation_x0020_Date` as `YYYY-MM-DDT00:00:00Z`.
 - **Graph auth** for reads and the PATCH uses n8n's stored credential; Keyway does not need it for the local-mount flow.
 
@@ -192,7 +192,21 @@ graph TD
 
 ---
 
-## 6. The Keyway workflow (created 2026-09-06)
+## 6. The Keyway workflows (created 2026-09-06)
+
+Three workflows, all deployed from SDK sources in `n8n/`. Operator instructions for them are in `docs/operations.md`.
+
+| Workflow | ID | Source | Trigger |
+|---|---|---|---|
+| Keyway - Process Queue | `mp5gviKuHu9iIfPo` | `n8n/keyway-process-queue.workflow.ts` | schedule, 15 min |
+| Keyway - Seed Queue | `S2RN9PNHdZFZoZYe` | `n8n/keyway-seed-queue.workflow.ts` | schedule, daily 06:00 (an earlier draft `KCS0Swhq1EECnpTM` is archived) |
+| Keyway - Reset Queue Rows | `U2h9cJTWhJ9UBVPZ` | `n8n/keyway-reset-rows.workflow.ts` | n8n form, login required (`n8nUserAuth`) |
+
+**Seed Queue** reuses the frozen seeder's Graph listing (same folder, `$expand=listItem`, `@odata.nextLink` paging, credential `Sharepoint video process`) and adds de-duplication: it loads every `driveItemId` already in the table once (`executeOnce`) and a Code node keeps only unseen files. Verified 2026-09-06: 281 files in the folder, 281 already queued, 0 inserted. (n8n's `rowNotExists` operation also returned 0 in that situation and was replaced only because the explicit version logs its counts.)
+
+**Reset Queue Rows** takes comma-separated row ids from a login-protected form, sets `status=pending` and clears title/synopsis/date/sensitivity/error while keeping `attemptCount`. It can also be driven by an agent through the MCP `execute_workflow` tool with `inputs.formData.rowIds`. Used 2026-09-06 to reset rows 1 and 2.
+
+### Process Queue
 
 **`Keyway - Process Queue`**, id `mp5gviKuHu9iIfPo`, https://n8n.pesengineers.dev/workflow/mp5gviKuHu9iIfPo. Created **inactive**. Source of truth is `n8n/keyway-process-queue.workflow.ts` in this repo (n8n Workflow SDK code); the n8n copy is a deployment of that file.
 
@@ -236,5 +250,5 @@ SDK quirks learned: `sticky(text, nodes?, config?)` is positional, not `sticky({
 - [ ] Graph secret has been rotated.
 - [ ] Manual test run on one row succeeds end to end (row `done`, SharePoint fields populated).
 - [ ] Agree who reviews `flagged_*` and `error` rows and how often.
-- [ ] Activate. First cycle runs within 15 minutes; 100 rows at one per cycle is roughly 25 hours. Shorten the interval to 5 minutes once stable (Keyway takes about a minute per hour of video).
+- [ ] Activate. First cycle runs within 15 minutes; 281 rows at one per 15-minute cycle is roughly 3 days. Shorten the interval to 5 minutes once stable (Keyway takes about a minute per hour of video plus download time), which brings the backlog to about a day.
 

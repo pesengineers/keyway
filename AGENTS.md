@@ -12,7 +12,8 @@ Keyway is a single-container worker that turns an internal training video into a
 |---|---|
 | **Where things stand right now, what to do next, what is unresolved** | **`docs/STATUS.md` (read this first)** |
 | What happened in each session, chronologically | `docs/deployment-journal.md` |
-| Rebuild everything from nothing, day-to-day operations, repairs | `docs/runbook.md` |
+| Day-to-day operation without touching code (statuses, resets, weekly review) | `docs/operations.md` |
+| Rebuild everything from nothing, repairs, deployments | `docs/runbook.md` |
 | Why the code is shaped the way it is | `docs/architecture.md`, `docs/decisions/` |
 | Unraid host, GPU UUIDs, SSH, Ollama, benchmarks | `docs/unraid-deployment.md` |
 | n8n contract, existing workflows, SharePoint IDs | `docs/n8n-integration.md` |
