@@ -40,6 +40,16 @@ curl -X POST http://127.0.0.1:8000/v1/process/local \
   -d '{"source_path":"/media/2021-08-19 training.mp4","job_id":"n8n-123"}'
 ```
 
+Or request remote processing from SharePoint via Microsoft Graph:
+
+```console
+curl -X POST http://127.0.0.1:8000/v1/process/sharepoint \
+  -H "Content-Type: application/json" \
+  -d '{"job_id":"n8n-124","site_id":"pesengineers.sharepoint.com,root","drive_id":"b!abc","item_id":"01XYZ","filename":"2021-08-19 training.mp4"}'
+```
+
+The SharePoint endpoint requires `GRAPH_TENANT_ID`, `GRAPH_CLIENT_ID`, and `GRAPH_CLIENT_SECRET` in the environment. It streams the file into the temporary directory with strict timeout and size limits, executes the pipeline, and removes the downloaded video in a finally block.
+
 Artifacts are written to `OUTPUT_DIR/<job_id>/`. `GET /health` is liveness; `GET /ready` verifies ffmpeg, ffprobe, analysis configuration, and writable runtime mounts. Run one Uvicorn worker so the configured process-local concurrency limit remains authoritative.
 
 The local endpoint is for mounted development and trusted private-network use. It rejects paths outside `LOCAL_SOURCE_ROOTS`; it does not fetch URLs.

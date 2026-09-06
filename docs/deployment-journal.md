@@ -37,11 +37,11 @@ This journal tracks all completed, in-progress, and pending operational tasks ac
 
 ## 3. SharePoint Graph Source Adapter (Issue #5)
 
-- [ ] **Step 3.1**: Implement `SharePointMediaSource` conforming to `MediaSource` protocol.
-- [ ] **Step 3.2**: Enforce constrained inputs: `site_id`, `drive_id`, `item_id`, and `filename` (no arbitrary URLs).
-- [ ] **Step 3.3**: Token injection, streaming download directly to temp dir, size bounds, and cleanup on failure.
-- [ ] **Step 3.4**: Unit & integration test suites with mocked Microsoft Graph endpoints.
-- [ ] **Step 3.5**: Close Issue #5 on GitHub.
+- [X] **Step 3.1**: Implement `SharePointMediaSource` conforming to `MediaSource` protocol.
+- [X] **Step 3.2**: Enforce constrained inputs: `site_id`, `drive_id`, `item_id`, and `filename` (no arbitrary URLs).
+- [X] **Step 3.3**: Token injection, streaming download directly to temp dir, size bounds, and cleanup on failure.
+- [X] **Step 3.4**: Unit & integration test suites with mocked Microsoft Graph endpoints.
+- [X] **Step 3.5**: Close Issue #5 on GitHub.
 
 ---
 
@@ -68,6 +68,12 @@ This journal tracks all completed, in-progress, and pending operational tasks ac
 ### 2026-09-05
 
 ### Phase 1 Block Reason
+### 2026-09-06 (Phase 3 - SharePoint Graph Source Adapter)
+- Implemented `SharePointMediaSource` in `app/sources.py` using OAuth client credentials and constrained Microsoft Graph content downloads.
+- Added `POST /v1/process/sharepoint` endpoint to `app/main.py` with strict Pydantic payload validation (`SharePointProcessRequest`).
+- Implemented streaming download with explicit byte limit (`MAX_SOURCE_BYTES`), timeouts, and guaranteed removal in finally/exception blocks.
+- Added unit and integration tests in `tests/test_sources.py` verifying OAuth token acquisition, content streaming, size limit enforcement, credential validation, and path traversal rejection. All 27 tests pass.
+- Updated `README.md`, `docs/architecture.md`, and configuration.
 ### 2026-09-06 (Phase 2 - Ollama Backend)
 - Implemented `OllamaAnalysisBackend` in `app/analysis.py` with structured JSON schema format (`_ANALYSIS_SCHEMA`), model configuration, and safe error handling.
 - Updated readiness endpoint in `app/main.py` to allow `ollama` backend without requiring `ANALYSIS_API_KEY`.

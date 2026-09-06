@@ -17,7 +17,7 @@ from app.config import Settings, get_settings
 from app.media import MediaError, validate_http_source
 from app.models import ProcessingResult
 from app.pipeline import VideoProcessor
-from app.sources import LocalMediaSource
+from app.sources import LocalMediaSource, SharePointMediaSource, SourceError
 from app.transcription import TranscriptionError
 
 
@@ -26,6 +26,16 @@ class LocalProcessRequest(BaseModel):
 
     source_path: Path
     job_id: str = Field(pattern=r"^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$")
+
+
+class SharePointProcessRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    job_id: str = Field(pattern=r"^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$")
+    site_id: str = Field(min_length=1, max_length=256)
+    drive_id: str = Field(min_length=1, max_length=256)
+    item_id: str = Field(min_length=1, max_length=256)
+    filename: str = Field(pattern=r"^[^/\\?%*:|\"<>\r\n]+\.[A-Za-z0-9]+$")
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:
@@ -86,6 +96,63 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                     media_source,
                     output_dir,
                 )
+            except MediaError as exc:
+                raise HTTPException(
+                    status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+                    detail=str(exc),
+                ) from exc
+            except AnalysisError as exc:
+                raise HTTPException(
+                    status_code=status.HTTP_502_BAD_GATEWAY, detail=str(exc)
+                ) from exc
+            except TranscriptionError as exc:
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail=str(exc),
+                ) from exc
+
+    @application.post("/v1/process/sharepoint", response_model=ProcessingResult)
+    async def process_sharepoint(
+        body: SharePointProcessRequest, request: Request
+    ) -> ProcessingResult:
+        active_settings: Settings = request.app.state.settings
+        if not (
+            active_settings.graph_tenant_id
+            and active_settings.graph_client_id
+            and active_settings.graph_client_secret
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="SharePoint integration credentials are not configured",
+            )
+
+        media_source = SharePointMediaSource(
+            site_id=body.site_id,
+            drive_id=body.drive_id,
+            item_id=body.item_id,
+            expected_filename=body.filename,
+            max_source_bytes=active_settings.max_source_bytes,
+            tenant_id=active_settings.graph_tenant_id,
+            client_id=active_settings.graph_client_id,
+            client_secret=active_settings.graph_client_secret.get_secret_value(),
+            base_url=active_settings.graph_base_url,
+            timeout_seconds=active_settings.graph_timeout_seconds,
+        )
+
+        output_dir = active_settings.output_dir / body.job_id
+        semaphore: asyncio.Semaphore = request.app.state.job_slots
+        async with semaphore:
+            try:
+                return await asyncio.to_thread(
+                    VideoProcessor(active_settings).process,
+                    media_source,
+                    output_dir,
+                )
+            except SourceError as exc:
+                raise HTTPException(
+                    status_code=status.HTTP_502_BAD_GATEWAY,
+                    detail=f"SharePoint source failed: {exc}",
+                ) from exc
             except MediaError as exc:
                 raise HTTPException(
                     status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,

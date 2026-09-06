@@ -17,11 +17,15 @@
 7. The worker atomically writes `transcript.txt` and `result.json`.
 8. The temporary job directory is removed in a `finally` path.
 
-A leading valid `YYYY-MM-DD` filename date takes precedence over a date inferred by the analysis model. Inference is accepted only when the transcript explicitly supplies a date; otherwise the value is unknown.
+## Source adapters
 
-## Source adapter seam
-
-The proven processing boundary is a validated local filesystem path. A future SharePoint adapter should download or stream a constrained Graph item into the managed job directory, then call the same processor. It should accept site, drive, and item identifiers—not an arbitrary URL—and must validate expected filename, size, redirect hosts, and timeouts. n8n should not proxy video bytes.
+Keyway isolates media fetching behind the `MediaSource` interface (`app/sources.py`):
+1. **LocalMediaSource**: Validates a local filesystem path within `LOCAL_SOURCE_ROOTS`. Used by `POST /v1/process/local`.
+2. **SharePointMediaSource**: Downloads video streams directly from Microsoft Graph (`GET /sites/{site-id}/drives/{drive-id}/items/{item-id}/content`) using OAuth client credentials. Enforces:
+   - Constrained parameters (site, drive, item ID, expected filename). No arbitrary URLs or open SSRF.
+   - Streaming download directly into per-job temporary workspace with a strict maximum byte limit (`MAX_SOURCE_BYTES`).
+   - Guaranteed cleanup of downloaded video binaries in context exit/finally blocks.
+   - n8n orchestrates with small JSON payloads; it never handles multi-gigabyte media binaries.
 
 ## Concurrency
 

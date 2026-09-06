@@ -36,6 +36,13 @@ class Settings(BaseSettings):
     analysis_model: str = "gpt-4.1-mini"
     analysis_timeout_seconds: float = Field(default=120.0, gt=0)
     analysis_max_characters: int = Field(default=120_000, ge=1_000)
+    # SharePoint / Microsoft Graph configuration (optional, for remote sources)
+    graph_tenant_id: str | None = None
+    graph_client_id: str | None = None
+    graph_client_secret: SecretStr | None = None
+    graph_base_url: str = "https://graph.microsoft.com/v1.0"
+    graph_timeout_seconds: float = Field(default=300.0, gt=0)
+
 
     local_source_roots: list[Path] = Field(default_factory=list)
     max_source_bytes: int = Field(default=50 * 1024**3, gt=0)
