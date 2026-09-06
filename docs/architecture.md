@@ -11,7 +11,9 @@
 3. A per-job directory is created below `TEMP_DIR`.
 4. Fixed ffprobe and ffmpeg argument lists read duration and produce mono 16 kHz PCM WAV audio.
 5. faster-whisper transcribes the WAV with `small.en` by default. `auto` selects CUDA when CTranslate2 reports an available CUDA device and otherwise selects CPU INT8. A failed auto-selected CUDA run retries once on CPU INT8.
-6. An `AnalysisBackend` produces strict structured output. The initial implementation calls an OpenAI-compatible `/chat/completions` endpoint with a JSON Schema response format.
+6. An `AnalysisBackend` produces strict structured output. Supported backends include:
+   - `openai`: Calls OpenAI or an OpenAI-compatible `/chat/completions` endpoint with `json_schema` response format. Requires `ANALYSIS_API_KEY`.
+   - `ollama`: Calls local Ollama `/api/chat` with structured `format` JSON schema. Does not require an API key by default.
 7. The worker atomically writes `transcript.txt` and `result.json`.
 8. The temporary job directory is removed in a `finally` path.
 

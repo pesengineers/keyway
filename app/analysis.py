@@ -95,9 +95,72 @@ class OpenAICompatibleAnalysisBackend:
         return AnalysisOutput(parse_analysis_content(content), warnings)
 
 
+class OllamaAnalysisBackend:
+    def __init__(
+        self,
+        settings: Settings,
+        *,
+        transport: httpx.BaseTransport | None = None,
+    ) -> None:
+        self._settings = settings
+        self._transport = transport
+
+    def analyze(self, transcript: str, source_filename: str) -> AnalysisOutput:
+        prepared_transcript, warnings = _limit_transcript(
+            transcript, self._settings.analysis_max_characters
+        )
+        payload = {
+            "model": self._settings.analysis_model,
+            "messages": [
+                {"role": "system", "content": _SYSTEM_PROMPT},
+                {
+                    "role": "user",
+                    "content": (
+                        f"Source filename: {Path(source_filename).name}\n\n"
+                        "Transcript begins:\n<transcript>\n"
+                        f"{prepared_transcript}\n"
+                        "</transcript>\nTranscript ends."
+                    ),
+                },
+            ],
+            "format": _ANALYSIS_SCHEMA,
+            "stream": False,
+        }
+        endpoint = f"{self._settings.analysis_base_url.rstrip('/')}/api/chat"
+        headers: dict[str, str] = {"Content-Type": "application/json"}
+        if self._settings.analysis_api_key is not None:
+            headers["Authorization"] = (
+                f"Bearer {self._settings.analysis_api_key.get_secret_value()}"
+            )
+
+        try:
+            with httpx.Client(
+                timeout=self._settings.analysis_timeout_seconds,
+                transport=self._transport,
+            ) as client:
+                response = client.post(endpoint, headers=headers, json=payload)
+                response.raise_for_status()
+        except httpx.TimeoutException as exc:
+            raise AnalysisError("Analysis request timed out") from exc
+        except httpx.HTTPStatusError as exc:
+            raise AnalysisError(
+                f"Analysis API returned HTTP {exc.response.status_code}"
+            ) from exc
+        except httpx.RequestError as exc:
+            raise AnalysisError("Analysis API request failed") from exc
+
+        try:
+            content = response.json()["message"]["content"]
+        except (ValueError, KeyError, IndexError, TypeError) as exc:
+            raise AnalysisError("Analysis API returned an unexpected response shape") from exc
+        return AnalysisOutput(parse_analysis_content(content), warnings)
+
+
 def build_analysis_backend(settings: Settings) -> AnalysisBackend:
     if settings.analysis_backend.lower() == "openai":
         return OpenAICompatibleAnalysisBackend(settings)
+    if settings.analysis_backend.lower() == "ollama":
+        return OllamaAnalysisBackend(settings)
     raise AnalysisError(f"Unsupported analysis backend: {settings.analysis_backend}")
 
 

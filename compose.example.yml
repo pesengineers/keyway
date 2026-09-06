@@ -23,3 +23,20 @@ services:
     read_only: true
     tmpfs:
       - /run:size=16m,mode=0755
+
+  # Optional local Ollama service for fully offline metadata review:
+  # ollama:
+  #   image: ollama/ollama:latest
+  #   restart: unless-stopped
+  #   volumes:
+  #     - ./ollama:/root/.ollama
+  #   ports:
+  #     - "127.0.0.1:11434:11434"
+  #   # For GPU acceleration in Ollama:
+  #   # deploy:
+  #   #   resources:
+  #   #     reservations:
+  #   #       devices:
+  #   #         - driver: nvidia
+  #   #           count: all
+  #   #           capabilities: [gpu]

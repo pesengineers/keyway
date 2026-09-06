@@ -43,6 +43,19 @@ def test_readiness_fails_without_analysis_key(tmp_path: Path) -> None:
     assert response.json()["detail"] == ["analysis API key is not configured"]
 
 
+
+def test_readiness_succeeds_with_ollama_backend_without_key(tmp_path: Path) -> None:
+    settings = _settings(tmp_path)
+    settings.analysis_backend = "ollama"
+    settings.analysis_api_key = None
+    app = create_app(settings)
+
+    with TestClient(app) as client:
+        response = client.get("/ready")
+
+    assert response.status_code == 200
+    assert response.json() == {"status": "ready"}
+
 def test_local_endpoint_rejects_path_outside_mount(tmp_path: Path) -> None:
     source = tmp_path / "outside.mp4"
     source.write_bytes(b"video")

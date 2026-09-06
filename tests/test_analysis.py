@@ -7,7 +7,9 @@ import pytest
 
 from app.analysis import (
     AnalysisError,
+    OllamaAnalysisBackend,
     OpenAICompatibleAnalysisBackend,
+    build_analysis_backend,
     parse_analysis_content,
 )
 from app.config import Settings
@@ -73,6 +75,78 @@ def test_openai_compatible_backend_uses_structured_output() -> None:
     assert output.result.title == "Revit Parameters"
     assert output.result.sensitivity is Sensitivity.SAFE
 
+
+
+def test_ollama_backend_uses_format_schema() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        assert request.url.path == "/api/chat"
+        payload = json.loads(request.content)
+        assert payload["model"] == "llama3.2:latest"
+        assert payload["stream"] is False
+        assert "properties" in payload["format"]
+        assert set(payload["format"]["required"]) == {
+            "title",
+            "synopsis",
+            "sensitivity",
+            "sensitivity_reason",
+            "presentation_date",
+        }
+        content = json.dumps(
+            {
+                "title": "Local Ollama Analysis",
+                "synopsis": "Technical training analyzed locally via Ollama.",
+                "sensitivity": "internal_only",
+                "sensitivity_reason": "Contains internal architectural workflows.",
+                "presentation_date": "2023-05-10",
+            }
+        )
+        return httpx.Response(
+            200,
+            json={"message": {"role": "assistant", "content": content}},
+        )
+
+    settings = Settings(
+        _env_file=None,
+        analysis_backend="ollama",
+        analysis_base_url="http://localhost:11434",
+        analysis_model="llama3.2:latest",
+    )
+    backend = OllamaAnalysisBackend(
+        settings, transport=httpx.MockTransport(handler)
+    )
+
+    output = backend.analyze("Internal workflow overview.", "2023-05-10 workflow.mp4")
+
+    assert output.result.title == "Local Ollama Analysis"
+    assert output.result.sensitivity is Sensitivity.INTERNAL_ONLY
+    assert str(output.result.presentation_date) == "2023-05-10"
+
+
+def test_build_analysis_backend_selects_ollama() -> None:
+    settings = Settings(
+        _env_file=None,
+        analysis_backend="ollama",
+        analysis_base_url="http://localhost:11434",
+    )
+    backend = build_analysis_backend(settings)
+    assert isinstance(backend, OllamaAnalysisBackend)
+
+
+def test_ollama_backend_handles_http_error() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(500, text="Internal Ollama Error")
+
+    settings = Settings(
+        _env_file=None,
+        analysis_backend="ollama",
+        analysis_base_url="http://localhost:11434",
+    )
+    backend = OllamaAnalysisBackend(
+        settings, transport=httpx.MockTransport(handler)
+    )
+
+    with pytest.raises(AnalysisError, match="HTTP 500"):
+        backend.analyze("Some text", "test.mp4")
 
 def test_reject_unknown_analysis_fields() -> None:
     content = json.dumps(

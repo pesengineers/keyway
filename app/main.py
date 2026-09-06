@@ -123,9 +123,10 @@ def _readiness_problems(settings: Settings) -> list[str]:
                 pass
         except OSError:
             problems.append(f"{name} directory is not writable")
-    if settings.analysis_backend.lower() != "openai":
+    backend = settings.analysis_backend.lower()
+    if backend not in {"openai", "ollama"}:
         problems.append(f"analysis backend is unsupported: {settings.analysis_backend}")
-    elif settings.analysis_api_key is None:
+    elif backend == "openai" and settings.analysis_api_key is None:
         problems.append("analysis API key is not configured")
     return problems
 
