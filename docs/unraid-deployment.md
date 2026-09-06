@@ -164,7 +164,7 @@ Template values used on `pes-dev` (Community Apps > Ollama):
 | Extra Parameters (Advanced View) | `--runtime=nvidia` | required for the NVIDIA variables to take effect |
 | `OLLAMA_KEEP_ALIVE` | `2m` | frees VRAM promptly between jobs |
 | Appdata | `/mnt/user/appdata/ollama` → `/root/.ollama` | model store (~2 GB for llama3.2:3b) |
-| Port | template publishes `11434` on the host; **remove** before production so Ollama is reachable only from `keyway-net` |
+| Port | remove the "API Interface Port" row so Ollama is reachable only from `keyway-net` (done on `pes-dev`). Keep `OLLAMA_HOST=0.0.0.0:11434`; `127.0.0.1` would block other containers |
 
 Keyway environment for this backend:
 
