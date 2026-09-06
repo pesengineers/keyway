@@ -23,13 +23,15 @@
 
 .PARAMETER SiteId
     Graph site id, e.g. "pes1852.sharepoint.com,97c4bdef-...,316269b2-...".
-    Required unless -TenantWide.
+    Required for first-time setup unless -TenantWide. Optional with -RotateSecret
+    (the site grant is skipped; permissions are left as they are).
 
 .EXAMPLE
     .\scripts\New-KeywayGraphApp.ps1 -SiteId "pes1852.sharepoint.com,97c4bdef-10db-4a0a-b359-050ced66dd51,316269b2-8c0d-438a-9466-a3a1f9800a8a"
 
 .EXAMPLE
-    .\scripts\New-KeywayGraphApp.ps1 -TenantWide -RotateSecret
+    .\scripts\New-KeywayGraphApp.ps1 -RotateSecret
+    Mints a new client secret for the existing app; touches nothing else.
 
 .NOTES
     Requires ONLY these two sub-modules (never the Microsoft.Graph meta-module):
@@ -51,7 +53,7 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
-if (-not $TenantWide -and -not $SiteId) {
+if (-not $TenantWide -and -not $SiteId -and -not $RotateSecret) {
     throw "Provide -SiteId for a least-privilege Sites.Selected grant, or -TenantWide for Files.Read.All."
 }
 
@@ -123,7 +125,7 @@ if (-not $assigned) {
 }
 
 # ------------------------------------------- per-site grant (Sites.Selected) ---
-if (-not $TenantWide) {
+if (-not $TenantWide -and $SiteId) {
     $perms = Invoke-MgGraphRequest -Method GET -Uri "https://graph.microsoft.com/v1.0/sites/$SiteId/permissions"
     $already = $perms.value | Where-Object {
         $_.grantedToIdentitiesV2 | ForEach-Object { $_.application.id } | Where-Object { $_ -eq $app.AppId }
