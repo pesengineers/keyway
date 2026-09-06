@@ -1,5 +1,63 @@
 # Unraid 7.2 NVIDIA deployment
 
+## SSH access to the host
+
+Established 2026-09-06 for `pes-dev.pes.local` (`192.168.76.42`). Recorded here because it took several attempts and the failure modes are non-obvious.
+
+### Where Unraid keeps root's keys
+
+- Live file: `/root/.ssh/authorized_keys` (mode 600, directory 700).
+- Persistent copy: `/boot/config/ssh/root/authorized_keys` on the flash drive. Unraid copies this into `/root/.ssh` at every boot; edit both or the change is lost on reboot.
+- The web GUI field (Users > root > "SSH authorized keys") writes to the same place, but only after clicking **Change**. It also writes the key **without a trailing newline**, so a later `echo >> authorized_keys` glues the next key onto the same line and silently invalidates both. Always write with `printf '%s\n' ...` or check with `cat -A`.
+- `sshd -T | grep -Ei "pubkey|passwordauth|permitroot|strictmodes"` shows the effective config. Defaults on this host: pubkey yes, password yes, PermitRootLogin yes, StrictModes yes.
+- `/var/log/syslog | grep sshd` shows the exact fingerprint sshd rejected. That is the fastest way to tell "wrong key offered" from "key not authorized".
+
+### Two keys are authorized
+
+| Comment | Fingerprint | Where the private key lives |
+|---|---|---|
+| `pes-dev` | `SHA256:4u7fD7/hMUMz5yNOGh4L+ZcD1KVLDdvea+sDP76/Fg0` | 1Password SSH agent only |
+| `me@dailen.net` | `SHA256:TBb1nZipGfzX/f+vneIpQWXiOfmW1PD7VpzY2b4B1Fg` | `~/.ssh/id_ed25519` on the workstation |
+
+### Why both exist: 1Password agent limitations
+
+The 1Password agent answers `ssh-add -L`, but `ssh` itself frequently reports `get_agent_identities: ssh_get_authentication_socket: No such file or directory` and never offers the `pes-dev` key. This happens for processes outside the interactive desktop session (automation tooling, agents, some terminals), and the `op` CLI hits the same wall (`cannot connect to 1Password app`). Exporting the key with `op read` produced PKCS#8 (`BEGIN PRIVATE KEY`), which Windows OpenSSH rejects for ed25519. The on-disk `id_ed25519` key was authorized so automation can log in regardless of agent state.
+
+### Workstation config
+
+`~/.ssh/config` has an alias so `ssh pes-dev` works from any shell:
+
+```
+Host pes-dev pes-dev.pes.local
+   HostName pes-dev.pes.local
+   User root
+   IdentityFile ~/.ssh/id_ed25519
+   IdentitiesOnly yes
+```
+
+### Adding another key safely (non-destructive)
+
+Run from any shell that can already log in. Backs up first, appends only if absent, guarantees a newline:
+
+```sh
+KEY='ssh-ed25519 AAAA... comment'
+for f in /root/.ssh/authorized_keys /boot/config/ssh/root/authorized_keys; do
+  cp -p "$f" "$f.bak.$(date +%Y%m%d%H%M%S)"
+  [ -n "$(tail -c1 "$f")" ] && echo >> "$f"
+  grep -qF "$KEY" "$f" || echo "$KEY" >> "$f"
+  chmod 600 "$f"
+done
+ssh-keygen -lf /root/.ssh/authorized_keys
+```
+
+Never paste multi-line commands into PowerShell to run remotely: here-strings emit CRLF and long lines wrap at the console width, both of which corrupted `authorized_keys` during setup. Keep remote commands on one line or run them from an interactive Unraid terminal.
+
+### Verify
+
+```
+ssh -o BatchMode=yes pes-dev "uname -a"
+```
+
 ## Host paths
 
 Create writable directories owned by the container user (`10001:10001`) or set equivalent ACLs:
