@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- n8n: add `Keyway - Seed Queue` (daily, paginated Graph listing with de-duplication) and `Keyway - Reset Queue Rows` (login-protected form) alongside `Keyway - Process Queue`; add canvas notes, continue-on-error for the Keyway call, and route failures to the existing Sentry error workflow.
+- Add `docs/operations.md`, a non-developer guide to statuses, the weekly review, resets, and troubleshooting.
+
 - Discard model-supplied `presentation_date` unless the model's `presentation_date_evidence` appears verbatim in the transcript; schemas require the new field. Local and hosted models all fabricated dates otherwise.
 - Rewrite the analysis system prompt: sensitivity is release risk, default `safe`, technical depth and internal authorship are explicitly not signals, reason must cite the passage.
 - Production analysis backend switched to OpenRouter (`openai/gpt-4o-mini`) via the existing OpenAI-compatible client; Ollama retained as offline fallback (ADR 006).

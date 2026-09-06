@@ -244,6 +244,12 @@ SDK quirks learned: `sticky(text, nodes?, config?)` is positional, not `sticky({
 - Execution 2500: Keyway returned 502 (`OAuth token request failed with HTTP 401`) because the Graph secret had just been deleted in Entra; the workflow correctly wrote `status=error` with the cause. Row 1.
 - Execution 2501: row 2 (`2021-11-18 12.02 P_T (SCS).mp4`, 37 min) processed in about 2.5 min; `llama3.2:3b` classified it `internal_only` for being "technical and specialized", which is wrong. The workflow correctly parked it as `flagged_internal` and did not write to SharePoint. This triggered the switch to OpenRouter (ADR 006). Rows 1 and 2 need `status` reset to `pending` to be reprocessed.
 
+### Resilience settings (2026-09-06)
+
+- All three workflows have **Settings > Error workflow** = `Send Error to Sentry` (`IQ3r3rK0FdZl4E0Q`, an existing active workflow on the instance). A red execution therefore reaches the team's Sentry.
+- The Keyway HTTP node in Process Queue has **On Error = Continue (regular output)** in addition to `neverError`. HTTP errors already flowed through as status codes; this covers connection-level failures (Keyway container down, DNS). Such rows get `status=error`, `errorMessage=Request to Keyway failed: ...` instead of being stuck in `processing` with a red run.
+- Canvas has three section notes (pickup, Keyway call, routing) written for operators; source in `n8n/keyway-process-queue.workflow.ts`.
+
 ### Activation checklist
 
 - [ ] Keyway container is on the image that returns 422 for silence (commit `314281a` or later).

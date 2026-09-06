@@ -71,6 +71,14 @@ This journal tracks all completed, in-progress, and pending operational tasks ac
 
 ## Session Activity Log
 
+### 2026-09-06 (autonomous continuation: helpers, operator docs, blocked on Graph secret)
+- No MCP tool updates data-table rows, so built `Keyway - Reset Queue Rows` (`U2h9cJTWhJ9UBVPZ`): form trigger with `n8nUserAuth`, Code node splits ids, data-table update sets `pending` and clears result fields. Used it to reset rows 1 and 2 (execution 2502).
+- Manual Process Queue run 2503 on row 1: Keyway 502, `OAuth token request failed with HTTP 401`, Entra `AADSTS7000215 Invalid client secret`. Template and container values match (40 chars); the same value worked at ~16:14. User action required. Row 1 reset again (attemptCount 2).
+- Built `Keyway - Seed Queue` (`S2RN9PNHdZFZoZYe`; first draft `KCS0Swhq1EECnpTM` archived): frozen seeder's Graph listing + `executeOnce` load of queued ids + Code de-dup. Manual run: 281 files, 281 queued, 0 new. **Correction:** the queue has 281 rows / 82 GB, not 100 / 26 GB; the earlier survey call was capped at 100 rows. Docs corrected.
+- Process Queue hardening via `update_workflow`: three operator sticky notes; Keyway node `onError=continueRegularOutput`; `Mark Row Error` message handles connection failures. Mirrored into the SDK source. All three workflows: `errorWorkflow` = `Send Error to Sentry`.
+- Published Seed Queue and Reset Rows. Process Queue left inactive pending the secret fix. Anonymous access to the reset form verified as 404.
+- Added `docs/operations.md` (operator guide) and linked it from README/AGENTS/n8n doc.
+
 ### 2026-09-06 (first workflow runs, analysis backend change)
 - Workflow execution 2500 hit 502: the Graph secret had been deleted in Entra between rotation and Apply (AADSTS7000215). Diagnosed by comparing template vs container value (identical) and requesting a token directly. User re-rotated; verified.
 - Execution 2501 processed row 2 end to end (37 min video, ~2.5 min) but `llama3.2:3b` returned `internal_only` reasoning that the content was "technical and specialized". Workflow correctly parked it as `flagged_internal`; nothing written to SharePoint.

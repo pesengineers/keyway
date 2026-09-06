@@ -109,6 +109,7 @@ const callKeyway = node({
   version: 4.5,
   config: {
     name: 'Keyway Process SharePoint Item',
+    onError: 'continueRegularOutput',
     parameters: {
       method: 'POST',
       url: expr("{{ $('Config').item.json.keywayUrl }}/v1/process/sharepoint"),
@@ -322,7 +323,7 @@ const markError = node({
         mappingMode: 'defineBelow',
         value: {
           status: 'error',
-          errorMessage: expr("{{ 'HTTP ' + $json.statusCode + ': ' + (($json.body && $json.body.detail) ? $json.body.detail : JSON.stringify($json.body || $json)) }}"),
+          errorMessage: expr("{{ $json.statusCode ? ('HTTP ' + $json.statusCode + ': ' + (($json.body && $json.body.detail) ? $json.body.detail : JSON.stringify($json.body || $json))) : ('Request to Keyway failed: ' + ($json.error && $json.error.message ? $json.error.message : JSON.stringify($json))) }}"),
         },
         schema: [
           { id: 'status', displayName: 'status', type: 'string', canBeUsedToMatch: false },
