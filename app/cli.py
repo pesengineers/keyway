@@ -12,7 +12,7 @@ from app.sources import LocalMediaSource
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(prog="video-review-worker")
+    parser = argparse.ArgumentParser(prog="keyway")
     subparsers = parser.add_subparsers(dest="command", required=True)
     process = subparsers.add_parser(
         "process", help="transcribe and analyze one local video"

@@ -42,7 +42,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         yield
 
     application = FastAPI(
-        title="video-review-worker",
+        title="keyway",
         version="0.1.0",
         lifespan=lifespan,
     )

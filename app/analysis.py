@@ -59,7 +59,7 @@ class OpenAICompatibleAnalysisBackend:
             "response_format": {
                 "type": "json_schema",
                 "json_schema": {
-                    "name": "video_review",
+                    "name": "keyway_result",
                     "strict": True,
                     "schema": _ANALYSIS_SCHEMA,
                 },

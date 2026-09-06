@@ -3,7 +3,7 @@ requires = ["setuptools>=80"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "video-review-worker"
+name = "keyway"
 version = "0.1.0"
 description = "Local-first video transcription and review metadata worker"
 readme = "README.md"
@@ -24,7 +24,7 @@ dev = [
 ]
 
 [project.scripts]
-video-review-worker = "app.cli:main"
+keyway = "app.cli:main"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

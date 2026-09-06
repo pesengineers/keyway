@@ -4,8 +4,8 @@
 
 Create writable directories owned by the container user (`10001:10001`) or set equivalent ACLs:
 
-- `/mnt/user/appdata/video-review-worker/models` → `/models`
-- `/mnt/cache/video-review-worker/tmp` → `/tmp/video-review-worker`
+- `/mnt/user/appdata/keyway/models` → `/models`
+- `/mnt/cache/keyway/tmp` → `/tmp/keyway`
 - a durable artifact directory → `/output`
 - the approved video library → `/media` read-only
 
@@ -20,7 +20,7 @@ WHISPER_MODEL=small.en
 WHISPER_DEVICE=auto
 WHISPER_COMPUTE_TYPE=auto
 MODEL_CACHE_DIR=/models
-TEMP_DIR=/tmp/video-review-worker
+TEMP_DIR=/tmp/keyway
 OUTPUT_DIR=/output
 LOCAL_SOURCE_ROOTS=["/media"]
 MAX_CONCURRENT_JOBS=1
@@ -40,9 +40,9 @@ docker run --rm \
   -v /path/to/media:/media:ro \
   -v /path/to/models:/models \
   -v /path/to/output:/output \
-  -v /path/to/tmp:/tmp/video-review-worker \
+  -v /path/to/tmp:/tmp/keyway \
   -p 127.0.0.1:8000:8000 \
-  ghcr.io/pesengineers/video-review-worker:latest
+  ghcr.io/pesengineers/keyway:latest
 ```
 
 ## NVIDIA run
@@ -53,10 +53,10 @@ Find stable GPU UUIDs with `nvidia-smi -L`. Select the Quadro P2000 by UUID rath
 docker run --rm --gpus '"device=GPU-REPLACE_WITH_P2000_UUID"' \
   --env-file .env \
   -v /mnt/user/training-videos:/media:ro \
-  -v /mnt/user/appdata/video-review-worker/models:/models \
-  -v /mnt/cache/video-review-worker/tmp:/tmp/video-review-worker \
-  -v /mnt/user/appdata/video-review-worker/output:/output \
-  ghcr.io/pesengineers/video-review-worker:latest
+  -v /mnt/user/appdata/keyway/models:/models \
+  -v /mnt/cache/keyway/tmp:/tmp/keyway \
+  -v /mnt/user/appdata/keyway/output:/output \
+  ghcr.io/pesengineers/keyway:latest
 ```
 
 Leave `WHISPER_DEVICE=auto` and `WHISPER_COMPUTE_TYPE=auto`; the expected selected values are `cuda` and `float16`. The P620 should not be exposed to this container. GPU selection remains deployment configuration, not application logic.
@@ -65,7 +65,7 @@ The NVIDIA 580.159.03 driver is new enough for the container's CUDA 12 runtime. 
 
 ## Private n8n connection
 
-Prefer a user-defined Docker network shared only with n8n. Do not publish port 8000. n8n can call `http://video-review-worker:8000/v1/process/local` after both containers mount the same video path. If a host port is needed for diagnostics, bind only `127.0.0.1:8000`.
+Prefer a user-defined Docker network shared only with n8n. Do not publish port 8000. n8n can call `http://keyway:8000/v1/process/local` after both containers mount the same video path. If a host port is needed for diagnostics, bind only `127.0.0.1:8000`.
 
 ## Validation after storm recovery
 

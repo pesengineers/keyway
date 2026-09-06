@@ -25,7 +25,7 @@ class Settings(BaseSettings):
     ffmpeg_path: str = "ffmpeg"
     ffprobe_path: str = "ffprobe"
     temp_dir: Path = Field(
-        default_factory=lambda: Path(tempfile.gettempdir()) / "video-review-worker"
+        default_factory=lambda: Path(tempfile.gettempdir()) / "keyway"
     )
     model_cache_dir: Path = Field(default=Path.home() / ".cache" / "huggingface")
     output_dir: Path = Path("/output")

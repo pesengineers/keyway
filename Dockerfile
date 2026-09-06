@@ -22,16 +22,16 @@ COPY app ./app
 RUN pip install --no-cache-dir .
 
 RUN groupadd --gid 10001 worker \
-    && useradd --uid 10001 --gid worker --no-create-home --home-dir /tmp/video-review-worker worker \
-    && mkdir -p /models /media /output /tmp/video-review-worker \
-    && chown -R worker:worker /models /output /tmp/video-review-worker
+    && useradd --uid 10001 --gid worker --no-create-home --home-dir /tmp/keyway worker \
+    && mkdir -p /models /media /output /tmp/keyway \
+    && chown -R worker:worker /models /output /tmp/keyway
 
-ENV HOME=/tmp/video-review-worker \
+ENV HOME=/tmp/keyway \
     HF_HOME=/models \
-    TMPDIR=/tmp/video-review-worker
+    TMPDIR=/tmp/keyway
 
 USER worker
-VOLUME ["/models", "/output", "/tmp/video-review-worker"]
+VOLUME ["/models", "/output", "/tmp/keyway"]
 EXPOSE 8000
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \

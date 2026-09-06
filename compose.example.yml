@@ -1,7 +1,7 @@
 services:
-  video-review-worker:
+  keyway:
     build: .
-    image: ghcr.io/pesengineers/video-review-worker:latest
+    image: ghcr.io/pesengineers/keyway:latest
     restart: unless-stopped
     env_file:
       - path: .env
@@ -10,7 +10,7 @@ services:
       - ./media:/media:ro
       - ./models:/models
       - ./output:/output
-      - ./tmp:/tmp/video-review-worker
+      - ./tmp:/tmp/keyway
     ports:
       - "127.0.0.1:8000:8000"
     # NVIDIA host: uncomment the next line. Select a specific GPU with

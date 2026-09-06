@@ -1,4 +1,4 @@
-# video-review-worker
+# keyway
 
 A small Docker service for local video transcription and structured training-content review. n8n remains responsible for orchestration and SharePoint write-back.
 
@@ -49,7 +49,7 @@ The local endpoint is for mounted development and trusted private-network use. I
 Build and run the CPU configuration:
 
 ```console
-docker build -t video-review-worker .
+docker build -t keyway .
 docker compose -f compose.example.yml up
 ```
 

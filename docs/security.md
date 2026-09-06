@@ -17,7 +17,7 @@ Keep the service on a private Docker network shared with n8n. The compose exampl
 
 ## Operational requirements
 
-Mount `/media` read-only. Mount writable storage at `/models`, `/output`, and `/tmp/video-review-worker`; do not rely on the container writable layer. Restrict file permissions on transcript and result mounts because processed material may be sensitive. Rotate analysis credentials through Docker secrets or another secret-injection mechanism; never place a populated `.env` in Git.
+Mount `/media` read-only. Mount writable storage at `/models`, `/output`, and `/tmp/keyway`; do not rely on the container writable layer. Restrict file permissions on transcript and result mounts because processed material may be sensitive. Rotate analysis credentials through Docker secrets or another secret-injection mechanism; never place a populated `.env` in Git.
 
 Review logs before forwarding them centrally. Current logs include filenames and diagnostic errors but not transcript text or authorization headers.
 

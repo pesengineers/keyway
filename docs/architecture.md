@@ -2,7 +2,7 @@
 
 ## Boundary
 
-`video-review-worker` owns media normalization, local speech-to-text, transcript analysis, and processing telemetry. n8n owns scheduling, orchestration, SharePoint metadata updates, and human-review routing. The worker has no queue, scheduler, database, SharePoint write-back, or general-purpose command surface.
+`keyway` owns media normalization, local speech-to-text, transcript analysis, and processing telemetry. n8n owns scheduling, orchestration, SharePoint metadata updates, and human-review routing. The worker has no queue, scheduler, database, SharePoint write-back, or general-purpose command surface.
 
 ## Processing flow
 
