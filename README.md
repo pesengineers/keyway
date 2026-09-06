@@ -58,12 +58,14 @@ The local endpoint is for mounted development and trusted private-network use. I
 
 ## Docker
 
-Build and run the CPU configuration:
+Published image: **`ghcr.io/pesengineers/keyway:latest`**, built by GitHub Actions on every push to `main` (tests must pass). Immutable `main-<sha>` tags exist for pinning and rollback.
 
 ```console
-docker build -t keyway .
-docker compose -f compose.example.yml up
+docker pull ghcr.io/pesengineers/keyway:latest
+docker compose -f compose.example.yml up        # CPU by default; see the file for GPU
 ```
+
+Building locally (`docker build -t keyway .`) is only needed for development.
 
 The same CUDA-runtime image runs without a GPU when `WHISPER_DEVICE=cpu`. For NVIDIA, expose the selected GPU to the container and leave the Whisper device and compute type on `auto`. Models are downloaded at runtime and persist through the `/models` mount.
 

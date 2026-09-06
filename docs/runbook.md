@@ -37,7 +37,6 @@ host$ chown 10001:10001 /mnt/user/appdata/keyway/models /mnt/user/appdata/keyway
 | `/mnt/user/appdata/keyway/models` | `/models` | faster-whisper weights (~464 MB for small.en), persistent |
 | `/mnt/user/appdata/keyway/output` | `/output` | `transcript.txt` + `result.json` per job |
 | `/mnt/cache/keyway/tmp` | `/tmp/keyway` | scratch WAV per job; on SSD cache; always empty between jobs |
-| `/mnt/user/appdata/keyway/src` | n/a | git clone used for on-host image builds |
 
 ### 1.4 Private network
 
@@ -71,16 +70,23 @@ host$ docker exec ollama nvidia-smi -L                     # exactly one GPU, th
 host$ docker run --rm --network keyway-net curlimages/curl -s http://ollama:11434/api/version
 ```
 
-### 1.6 Build the Keyway image on the host
+### 1.6 Get the Keyway image
 
-Safe because: clone into the empty `src` dir; the build touches only Docker's image store.
+Images are built by GitHub Actions and published to **`ghcr.io/pesengineers/keyway`** (public). Nothing is built on the host.
+
+| Tag | Meaning |
+|---|---|
+| `latest` | most recent push to `main` that passed the test suite |
+| `main-<sha>` | immutable tag for that commit; use for pinning or rollback |
+| `X.Y.Z`, `X.Y` | created when a `vX.Y.Z` git tag is pushed |
 
 ```sh
-host$ cd /mnt/user/appdata/keyway/src && git clone https://github.com/pesengineers/keyway.git .
-host$ docker build -t keyway:local .
-host$ docker run --rm --gpus '"device=GPU-a16c6467-c3d8-cf56-6944-a53de59dcd6b"' keyway:local \
+host$ docker pull ghcr.io/pesengineers/keyway:latest
+host$ docker run --rm --gpus '"device=GPU-a16c6467-c3d8-cf56-6944-a53de59dcd6b"' ghcr.io/pesengineers/keyway:latest \
         python -c "import ctranslate2 as c; print(c.get_cuda_device_count(), c.get_supported_compute_types('cuda'))"
 ```
+
+The package must be **public** for anonymous pulls. If a pull returns `unauthorized`, see 3.6.
 
 Expected: `1 {'float32', 'int8', 'int8_float32'}` (Pascal has no float16; the app handles this).
 
@@ -91,7 +97,7 @@ The base image is ~4.5 GB; first build takes 5 to 10 minutes. Rebuilds after `gi
 Copy any sample video to `/mnt/cache/keyway/bench/` and run:
 
 ```sh
-host$ /mnt/user/appdata/keyway/src/scripts/bench.sh gpu-auto "/mnt/cache/keyway/bench/<file>.mp4"
+host$ curl -fsSL https://raw.githubusercontent.com/pesengineers/keyway/main/scripts/bench.sh -o /tmp/bench.sh && bash /tmp/bench.sh gpu-auto "/mnt/cache/keyway/bench/<file>.mp4"
 ```
 
 Expected on the P2000 for a ~1 h video: `device: cuda`, `compute_type: float32`, transcription ~40 s, total ~60 s, peak VRAM ~4 GB (Whisper + 3B model resident). Then `rm -rf /mnt/cache/keyway/bench`.
@@ -131,27 +137,51 @@ A drive list means the app can read the library. A 403 means the site grant is m
 
 Secret expiry is in 365 days from creation; put a calendar reminder at 11 months. Where secrets live is listed in section 4.
 
-### 1.8 Run the service
+### 1.8 Run the service (Unraid Docker template)
 
-Not yet done on `pes-dev` (tracked in issue #7). When ready, either add a Docker template in the GUI mirroring this, or:
+Create it in the Unraid GUI so it is managed like every other container (update badge, restart policy, template saved on flash under `/boot/config/plugins/dockerMan/templates-user/`). Docker tab, **Add Container**, switch to **Advanced View**.
+
+| Field | Value |
+|---|---|
+| Name | `keyway` |
+| Repository | `ghcr.io/pesengineers/keyway:latest` |
+| Network Type | Custom: `keyway-net` |
+| Extra Parameters | `--runtime=nvidia --security-opt no-new-privileges:true --cap-drop ALL --read-only --tmpfs /run:size=16m` |
+| Ports | none (n8n reaches it at `http://keyway:8000` on `keyway-net`) |
+
+Paths:
+
+| Container path | Host path | Access |
+|---|---|---|
+| `/models` | `/mnt/user/appdata/keyway/models` | RW |
+| `/output` | `/mnt/user/appdata/keyway/output` | RW |
+| `/tmp/keyway` | `/mnt/cache/keyway/tmp` | RW |
+
+Variables. For `GRAPH_CLIENT_SECRET` set Display to Advanced and tick **Password/Mask** so it is hidden in the UI and in `docker inspect` output shown by the GUI.
+
+| Key | Value |
+|---|---|
+| `NVIDIA_VISIBLE_DEVICES` | `GPU-a16c6467-c3d8-cf56-6944-a53de59dcd6b` |
+| `NVIDIA_DRIVER_CAPABILITIES` | `compute,utility` |
+| `ANALYSIS_BACKEND` | `ollama` |
+| `ANALYSIS_BASE_URL` | `http://ollama:11434` |
+| `ANALYSIS_MODEL` | `llama3.2:3b` |
+| `ANALYSIS_TIMEOUT_SECONDS` | `600` |
+| `MAX_CONCURRENT_JOBS` | `1` |
+| `GRAPH_TENANT_ID` | `68e4d43b-0bf8-4363-8311-accdd3b62fa1` |
+| `GRAPH_CLIENT_ID` | `90f1c65f-3d78-4569-b11d-d2fd6b73ef50` |
+| `GRAPH_CLIENT_SECRET` | from 1Password (masked) |
+| `GRAPH_TIMEOUT_SECONDS` | `600` |
+
+Leave `WHISPER_*`, `MODEL_CACHE_DIR`, `TEMP_DIR`, `OUTPUT_DIR` unset; the image defaults are correct. Apply, then verify from inside n8n:
 
 ```sh
-host$ docker run -d --name keyway --restart unless-stopped \
-  --network keyway-net \
-  --gpus '"device=GPU-a16c6467-c3d8-cf56-6944-a53de59dcd6b"' \
-  -e ANALYSIS_BACKEND=ollama -e ANALYSIS_BASE_URL=http://ollama:11434 -e ANALYSIS_MODEL=llama3.2:3b \
-  -e ANALYSIS_TIMEOUT_SECONDS=600 -e MAX_CONCURRENT_JOBS=1 \
-  -e LOCAL_SOURCE_ROOTS='["/media"]' \
-  -v /path/to/video/library:/media:ro \
-  -v /mnt/user/appdata/keyway/models:/models \
-  -v /mnt/user/appdata/keyway/output:/output \
-  -v /mnt/cache/keyway/tmp:/tmp/keyway \
-  --security-opt no-new-privileges:true --cap-drop ALL --read-only --tmpfs /run:size=16m \
-  keyway:local
 host$ docker exec n8n wget -qO- http://keyway:8000/ready      # {"status":"ready"}
 ```
 
-No `-p`: n8n reaches it as `http://keyway:8000` on `keyway-net`. For the SharePoint source, drop `-v ...:/media` and `LOCAL_SOURCE_ROOTS`, add `GRAPH_TENANT_ID`, `GRAPH_CLIENT_ID`, `GRAPH_CLIENT_SECRET`.
+For a local-mount source instead of Graph: add path `/media` -> the video library (read-only), add variable `LOCAL_SOURCE_ROOTS=["/media"]`, and omit the `GRAPH_*` variables.
+
+Secrets go in the template as variables, never in env files on disk and never in the repo. Rotating the Graph secret is: run `New-KeywayGraphApp.ps1 -RotateSecret`, update the variable in the template, Apply, then delete the old secret in Entra.
 
 ### 1.9 Attach n8n
 
@@ -179,12 +209,13 @@ dev$ git commit -am "..." && git push
 
 ### 2.2 Deploy a code change to the host
 
-```sh
-host$ cd /mnt/user/appdata/keyway/src && git pull && docker build -t keyway:local .
-host$ docker restart keyway                                  # once the service exists
-```
+Push to `main`. The **Publish image** workflow (`.github/workflows/publish-image.yml`) runs the tests, builds `linux/amd64`, and pushes `latest` and `main-<sha>` to GHCR; it takes about 5 minutes. Watch it with `gh run watch --repo pesengineers/keyway`. A failing test blocks the publish.
 
-To roll back: `git checkout <previous-sha>` in `src`, rebuild, restart. Images are tagged `keyway:local` only; tag a known-good build (`docker tag keyway:local keyway:known-good`) before rebuilding if you want a fast rollback.
+Then on Unraid: Docker tab shows an update badge on `keyway`; click **Check for Updates** then **Apply** (or `docker pull ghcr.io/pesengineers/keyway:latest && docker restart keyway` from a shell; the GUI path is preferred because it re-creates the container from the template).
+
+To roll back: edit the container's **Repository** field to a previous immutable tag, e.g. `ghcr.io/pesengineers/keyway:main-3a665ed`, and Apply. Tags are listed at https://github.com/pesengineers/keyway/pkgs/container/keyway. Return the field to `:latest` once fixed.
+
+To cut a release: `git tag vX.Y.Z && git push --tags`; the same workflow publishes `X.Y.Z` and `X.Y` tags. Update `CHANGELOG.md` first.
 
 ### 2.3 Change the analysis model
 
@@ -245,6 +276,26 @@ Ollama: update via the Unraid Docker tab like any CA container; model files pers
 
 `Dockerfile` pins `nvidia/cuda:12.8.1-cudnn-runtime-ubuntu24.04`. The host driver (580.x) supports CUDA 12.x. If moving to CUDA 13, confirm driver compatibility first and confirm CTranslate2 wheels exist for it.
 
+### 3.6 GHCR visibility and permissions
+
+The image is pulled anonymously, so the package must be public. Two settings control this, both org-level and both needed the first time (done 2026-09-06):
+
+1. **Org policy**: https://github.com/organizations/pesengineers/settings/packages, "Package creation" must allow **Public**. If it does not, the package's visibility dialog shows Public greyed out with "Setting is disabled by organization administrators".
+2. **Package visibility**: https://github.com/orgs/pesengineers/packages/container/keyway/settings, Danger Zone, Change visibility, Public. New packages are created private regardless of the repo's visibility.
+
+Via API (needs a token with `read:packages` and `write:packages`; `gh auth refresh -h github.com -s read:packages,write:packages`):
+
+```console
+dev$ gh api /orgs/pesengineers/packages/container/keyway --jq .visibility
+dev$ gh api -X PATCH /orgs/pesengineers/packages/container/keyway -f visibility=public
+```
+
+Note `write:packages` alone cannot read package metadata; the API returns 404 without `read:packages`, which looks like "package does not exist".
+
+If the package must stay private, instead create a fine-grained PAT with read access to the package, run `docker login ghcr.io` once as root on the host (Unraid persists `/root/.docker/config.json` to flash), and pulls will authenticate.
+
+The workflow authenticates with the automatic `GITHUB_TOKEN` (`packages: write`); no secret needs to be configured in the repo.
+
 ---
 
 ## 4. Credentials and where they live
@@ -264,7 +315,7 @@ None of these belong in git. `.env` is ignored; if a secret is ever committed, r
 ## 5. Decommission
 
 ```sh
-host$ docker rm -f keyway; docker rmi keyway:local
+host$ docker rm -f keyway; docker rmi ghcr.io/pesengineers/keyway:latest
 host$ docker network disconnect keyway-net n8n
 # Remove ollama via the Unraid Docker tab if no longer needed, then:
 host$ docker network rm keyway-net

@@ -4,7 +4,7 @@ This journal tracks all completed, in-progress, and pending operational tasks ac
 
 ---
 
-- **Phase**: All five phases complete; Ollama companion validated; n8n attached to `keyway-net`; agent access to n8n established via MCP. Repo now carries `AGENTS.md`, `docs/runbook.md`, and `docs/decisions/` so a colleague or agent can rebuild and operate everything. Remaining go-live work in Issue #7 (start the Keyway service container, media source decision, new n8n workflow).
+- **Phase**: Go-live (Issue #7) in progress. Image now published to `ghcr.io/pesengineers/keyway:latest` by CI and pulled by Unraid; on-host build path retired. Entra app "Keyway Video Worker" registered (`Sites.Selected`, read on the CE site). Next: create the `keyway` Docker container in the Unraid GUI with the template values in runbook 1.8 and the Graph secret as a masked variable, verify `/ready` from n8n, run one real Graph download from the queue, then draft the new n8n workflow.
 - **Target Host**: `pes-dev.pes.local` (`192.168.76.42`), Unraid kernel `6.12.85-Unraid`, Docker `29.3.1`, `nvidia` runtime registered.
 - **SSH access**: working as `root` via `~/.ssh/id_ed25519` (`SHA256:TBb1nZ...`); local `~/.ssh/config` has a `pes-dev` host alias. The 1Password `pes-dev` key (`SHA256:4u7fD7/...`) is also authorized for interactive use.
 - **GPU inventory (host)**:
@@ -25,7 +25,7 @@ This journal tracks all completed, in-progress, and pending operational tasks ac
   - `/mnt/user/appdata/keyway/models` (owner 10001:10001)
   - `/mnt/cache/keyway/tmp` (owner 10001:10001)
   - `/mnt/user/appdata/keyway/output` (owner 10001:10001)
-  - `/mnt/user/appdata/keyway/src` (git clone of the repo, used for on-host builds)
+  - `/mnt/user/appdata/keyway/src` (git clone used for on-host builds; **removed 2026-09-06** once GHCR publishing was in place)
 - [X] **Step 1.5**: Built `keyway:local` on the host from the cloned repo (no registry needed). Image 5.45 GB.
 - [X] **Step 1.6**: Benchmarked `small.en` on the P2000 in float32, int8_float32, int8, plus host CPU int8. Results in `docs/unraid-deployment.md`.
 - [X] **Step 1.7**: Documented results, GPU UUIDs, and compute-type recommendation; closed Issue #3.
@@ -72,6 +72,12 @@ This journal tracks all completed, in-progress, and pending operational tasks ac
 ## Session Activity Log
 
 
+### 2026-09-06 (GHCR publishing, Graph app registration)
+- Added `.github/workflows/publish-image.yml`: on push to `main` run tests, build `linux/amd64`, push `ghcr.io/pesengineers/keyway:latest` and `main-<sha>`; `v*` tags publish semver. First run (`3a665ed`) green in 4.5 min.
+- Package was created private and the org policy blocked public packages. User enabled public package creation at the org level, then flipped the package to public. Token needed `read:packages` for the API to even see the package (`write:packages` alone returns 404). All recorded in runbook 3.6.
+- Verified `pes-dev` pulls `ghcr.io/pesengineers/keyway:latest` anonymously and runs it. Removed `keyway:local` and `/mnt/user/appdata/keyway/src`; runbook, README, compose, and `scripts/bench.sh` now reference the GHCR image only.
+- User ran `scripts/New-KeywayGraphApp.ps1`: app **Keyway Video Worker**, tenant `68e4d43b-0bf8-4363-8311-accdd3b62fa1`, client `90f1c65f-3d78-4569-b11d-d2fd6b73ef50`, `Sites.Selected` + `read` on the CE site. Secret in 1Password; will be entered as a masked Docker variable in the Unraid template, not via env file (an env-file approach was created and then removed the same session).
+- Correction recorded as `AGENTS.md` rule 8: never install the `Microsoft.Graph` meta-module; the script needs only `Microsoft.Graph.Authentication` and `Microsoft.Graph.Applications`.
 ### 2026-09-06 (n8n access and repo handover)
 - `docker network connect keyway-net n8n` (n8n now on `bridge` + `keyway-net`; verified it reaches `http://ollama:11434`). No restart, no other change to n8n.
 - n8n's built-in MCP server (`https://n8n.pesengineers.dev/mcp-server/http`, n8n MCP Server 1.1.0) verified with the token in env `N8N_PES_MCP_API_Key` (1Password "n8n PES Dev API Key"). Registered as `n8n-pesdev` in committed `.omp/mcp.json` via `${N8N_PES_MCP_API_Key}`; no secret in the repo. 39 tools available including write operations.

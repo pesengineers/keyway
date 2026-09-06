@@ -15,7 +15,7 @@ set -euo pipefail
 
 label=${1:?label}; video=${2:?video path}; dev=${3:-auto}; ct=${4:-auto}
 GPU=${KEYWAY_GPU_UUID:-GPU-a16c6467-c3d8-cf56-6944-a53de59dcd6b}
-IMAGE=${KEYWAY_IMAGE:-keyway:local}
+IMAGE=${KEYWAY_IMAGE:-ghcr.io/pesengineers/keyway:latest}
 NET=${KEYWAY_NET:-keyway-net}
 MODEL=${ANALYSIS_MODEL:-llama3.2:3b}
 BENCH_DIR=${BENCH_DIR:-/mnt/cache/keyway/bench}

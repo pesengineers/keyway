@@ -1,7 +1,8 @@
 services:
   keyway:
-    build: .
     image: ghcr.io/pesengineers/keyway:latest
+    # For local development builds, uncomment:
+    # build: .
     restart: unless-stopped
     env_file:
       - path: .env
