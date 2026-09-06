@@ -4,7 +4,7 @@ A small Docker service for local video transcription and structured training-con
 
 The worker accepts a mounted local video or a SharePoint item reference, normalizes its audio with ffmpeg, transcribes it locally with faster-whisper, analyzes the transcript with a local Ollama model (or an OpenAI-compatible API), and emits `transcript.txt` plus `result.json`.
 
-**New here?** Read [`AGENTS.md`](AGENTS.md) first, then [`docs/runbook.md`](docs/runbook.md). Current status lives in [`docs/deployment-journal.md`](docs/deployment-journal.md).
+**New here?** Read [`AGENTS.md`](AGENTS.md), then [`docs/STATUS.md`](docs/STATUS.md) for where things stand and what to do next, then [`docs/runbook.md`](docs/runbook.md).
 
 ## Interfaces
 

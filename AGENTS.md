@@ -10,7 +10,8 @@ Keyway is a single-container worker that turns an internal training video into a
 
 | Need | Go to |
 |---|---|
-| Current state, what happened in each session, what is next | `docs/deployment-journal.md` |
+| **Where things stand right now, what to do next, what is unresolved** | **`docs/STATUS.md` (read this first)** |
+| What happened in each session, chronologically | `docs/deployment-journal.md` |
 | Rebuild everything from nothing, day-to-day operations, repairs | `docs/runbook.md` |
 | Why the code is shaped the way it is | `docs/architecture.md`, `docs/decisions/` |
 | Unraid host, GPU UUIDs, SSH, Ollama, benchmarks | `docs/unraid-deployment.md` |
@@ -26,7 +27,7 @@ Keyway is a single-container worker that turns an internal training video into a
 4. **Do not widen scope.** No new queues, schedulers, databases, UIs, or "while we're here" abstractions. Keyway stays small and boring.
 5. **Document as you go.** Every session that touches the host or the workflows appends to `docs/deployment-journal.md`. Every behavior change gets a `CHANGELOG.md` line. If you discover a hardware or platform quirk, write it into the relevant doc immediately.
 6. **Verify on the real path.** Unit tests are necessary but not sufficient; two production bugs were only found by running the container on the P2000. Use `scripts/bench.sh` or an equivalent end-to-end run before declaring deployment work done.
-7. **PowerShell users:** never paste multi-line remote commands; here-strings emit CRLF and wrapped lines corrupt files on the host. One line per command, or use the Unraid web terminal.
+5. **Document as you go.** Every session that touches the host, n8n, Entra, or GitHub settings appends to `docs/deployment-journal.md` and updates `docs/STATUS.md` (state table, unresolved list, "last updated"). Every behavior change gets a `CHANGELOG.md` line. If you discover a hardware or platform quirk, write it into the relevant doc immediately. A stale STATUS.md is a bug.
 8. **Do not bloat the workstation.** Never install the `Microsoft.Graph` meta-module (or any comparable "install everything" SDK bundle); install only the specific sub-modules a script imports. Do not install any module, package, or tool without saying exactly what will be installed first.
 
 ## Local development in 60 seconds
