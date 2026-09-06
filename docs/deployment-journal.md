@@ -78,6 +78,7 @@ This journal tracks all completed, in-progress, and pending operational tasks ac
 - Host briefly unreachable (ping loss, SSH timeout) for a few minutes during this work; came back on its own; uptime shows no reboot.
 - Decision (ADR 006): use OpenRouter with `openai/gpt-4o-mini` through the existing `openai` backend. User added the OpenRouter key to n8n credentials (`OpenRouter Dailen Personal`) and to the Keyway template as masked `ANALYSIS_API_KEY` plus the three `ANALYSIS_*` values. Verified in-container. A/B: `safe`, clean reason, good title/synopsis, 3.9 s; but date 2023-10-01 invented (transcript contains no date).
 - Added evidence gating (`124e067`): `presentation_date_evidence` required in both schemas; `_finalize()` drops the date unless the evidence string is found in the transcript, adding a warning. 42 tests. CI publishing.
+- Note: the CI run for `124e067` was cancelled by the following docs push (workflow uses `cancel-in-progress`); the `7db6310` run carries the same code and succeeded. Container recreated on image `76481f8d`. A/B on `queue-2`: `safe`, `date: None`, warning `Model-inferred presentation_date discarded`. Gate confirmed on real output.
 - Documentation updated across ADR 003/006, runbook (template, 2.3a A/B procedure, troubleshooting, secrets), architecture, security (data leaving host), n8n guide (first runs), STATUS, changelog.
 
 
