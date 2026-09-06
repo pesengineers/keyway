@@ -72,6 +72,11 @@ This journal tracks all completed, in-progress, and pending operational tasks ac
 ## Session Activity Log
 
 
+### 2026-09-06 (n8n workflow created)
+- Built `Keyway - Process Queue` (`mp5gviKuHu9iIfPo`) via the MCP `create_workflow_from_code` tool from `n8n/keyway-process-queue.workflow.ts`, following the server's required sequence (SDK reference, node type lookup, `validate_workflow`, create). Created inactive; frozen workflows untouched.
+- 15 nodes: schedule (15 min) → Config → get one `pending` row → loop → mark `processing` → POST Keyway (`fullResponse`+`neverError`) → route on HTTP status (200/422/other) → for 200 route on sensitivity → PATCH SharePoint only for `safe` → mark `done`/`flagged_internal`/`flagged_review`/`unprocessable`/`error`. Reuses credential `Sharepoint video process` (`icIlll1oh3FEHtYl`). Verified connections and credential assignment via `get_workflow_details`.
+- No schema change to the shared table; sensitivity is encoded in `status`. Documented in `docs/n8n-integration.md` §6 with deploy/update procedure and activation checklist.
+- SDK quirks: `sticky()` is positional; `+` string concatenation is not folded; every loop branch must end in `nextBatch(loop)`.
 ### 2026-09-06 (service container live, Graph path proven)
 - User created the `keyway` container in the Unraid GUI; first Apply failed because each host path had a leading space (Docker read them as volume names). Unraid had still saved `my-keyway.xml` to flash. Backed it up (`.bak.<ts>`), stripped the spaces with `sed`, added Support/Project/Icon links. Started the container from the template's values (secret read from the XML on-host, never transmitted). Runbook 1.8 now lists both pitfalls.
 - Verified: `docker exec n8n wget http://keyway:8000/ready` returns ready; CUDA device count 1 inside the container; `GRAPH_*` configured.

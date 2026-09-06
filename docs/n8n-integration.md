@@ -189,3 +189,47 @@ graph TD
    - Route `safe`: Write `title`, `synopsis`, `presentation_date` into SharePoint document library fields.
    - Route `internal_only`: Set tag `Internal Only`.
    - Route `review_required`: Hold status as `Pending Review` and post notification with `sensitivity_reason` to a Teams review channel.
+
+---
+
+## 6. The Keyway workflow (created 2026-09-06)
+
+**`Keyway - Process Queue`**, id `mp5gviKuHu9iIfPo`, https://n8n.pesengineers.dev/workflow/mp5gviKuHu9iIfPo. Created **inactive**. Source of truth is `n8n/keyway-process-queue.workflow.ts` in this repo (n8n Workflow SDK code); the n8n copy is a deployment of that file.
+
+Shape: Schedule (15 min) → Config → Get One Pending Row (limit 1, oldest first) → loop → Mark Row Processing (+attemptCount, lastAttemptAt) → POST `/v1/process/sharepoint` (`fullResponse` + `neverError`, 30 min timeout) → Route By HTTP Status → for 200, Route By Sensitivity.
+
+| Outcome | Row status written | SharePoint write |
+|---|---|---|
+| 200, `safe` | `done` (+ title, synopsis, presentationDate, sensitivityReason, isSensitive=false) | yes: Title, Synopsis (255 max), Presentation Date |
+| 200, `internal_only` | `flagged_internal` (+ fields, isSensitive=true) | no |
+| 200, `review_required` | `flagged_review` (+ fields, isSensitive=true) | no |
+| 422 | `unprocessable` (+ errorMessage from `detail`) | no; not retried |
+| other | `error` (+ errorMessage `HTTP <code>: <detail>`) | no; picked up again only if a human resets status to `pending` |
+
+Design notes:
+
+- Uses only existing columns of `video_metadata_queue`; the new information lives in the `status` vocabulary. Adding a `sensitivity` column would be cleaner but is a schema change to the shared table and needs approval (ADR 005).
+- One row per run because Keyway runs one job at a time; raising `limit` above 1 would just queue inside Keyway. Marking `processing` first prevents a double pick-up if a job outlasts the 15-minute interval.
+- `error` rows are **not** auto-retried. That is deliberate for the first weeks: a human looks at `errorMessage`, then flips `status` back to `pending`. Once the failure modes are understood, a "retry if attemptCount < 3" filter can be added to Get One Pending Row.
+- `job_id` sent to Keyway is `queue-<row id>`, so artifacts land at `/mnt/user/appdata/keyway/output/queue-<id>/`.
+- The SharePoint PATCH reuses credential `Sharepoint video process` (`icIlll1oh3FEHtYl`), the same one the frozen workflow uses.
+
+### Deploy or update from source
+
+With the MCP server (token in `N8N_PES_MCP_API_Key`):
+
+1. `get_workflow_sdk_reference` (the server requires it before code tools work).
+2. `validate_workflow` with the file contents; fix until `valid: true` and no warnings.
+3. First time: `create_workflow_from_code` with `name: "Keyway - Process Queue"`. Updates: use the workflow's edit/update tool with the same code against id `mp5gviKuHu9iIfPo`. Never point it at the frozen workflow ids.
+4. In the UI, open the workflow, check the SharePoint node still shows the credential, run once manually with the schedule disabled, inspect the row and the SharePoint item, then activate.
+
+SDK quirks learned: `sticky(text, nodes?, config?)` is positional, not `sticky({config})`; string concatenation with `+` is not folded, use one literal; the loop's `nextBatch(loop)` must terminate every branch.
+
+### Activation checklist
+
+- [ ] Keyway container is on the image that returns 422 for silence (commit `314281a` or later).
+- [ ] Graph secret has been rotated.
+- [ ] Manual test run on one row succeeds end to end (row `done`, SharePoint fields populated).
+- [ ] Agree who reviews `flagged_*` and `error` rows and how often.
+- [ ] Activate. First cycle runs within 15 minutes; 100 rows at one per cycle is roughly 25 hours. Shorten the interval to 5 minutes once stable (Keyway takes about a minute per hour of video).
+
