@@ -55,10 +55,10 @@ This journal tracks all completed, in-progress, and pending operational tasks ac
 
 ## 5. Sensitivity Prompt Evaluation & Hardening (Issues #2 & #4)
 
-- [ ] **Step 5.1**: Curate evaluation set of sample transcripts across safe, internal_only, and review_required categories.
-- [ ] **Step 5.2**: Measure classification accuracy and conservative uncertainty handling.
-- [ ] **Step 5.3**: Security review: timeout enforcement, disk cleanup guards, rate limiting, and private ingress docs.
-- [ ] **Step 5.4**: Close Issues #2 and #4 on GitHub.
+- [X] **Step 5.1**: Curate evaluation set of sample transcripts across safe, internal_only, and review_required categories.
+- [X] **Step 5.2**: Measure classification accuracy and conservative uncertainty handling.
+- [X] **Step 5.3**: Security review: timeout enforcement, disk cleanup guards, rate limiting, and private ingress docs.
+- [X] **Step 5.4**: Close Issues #2 and #4 on GitHub.
 
 ---
 
@@ -68,6 +68,10 @@ This journal tracks all completed, in-progress, and pending operational tasks ac
 
 ### Phase 1 Block Reason
 ### 2026-09-06 (Phase 4 - n8n Integration)
+### 2026-09-06 (Phase 5 - Evaluation & Hardening)
+- Created synthetic sensitivity evaluation benchmark dataset in `tests/data/sensitivity_eval_set.json` spanning routine technical CE instruction (`safe`), internal salary/performance reviews (`internal_only`), client-confidential contract terms (`internal_only`), credential leaks (`review_required`), and ambiguous NDA projects (`review_required`).
+- Created test suite `tests/test_sensitivity_eval.py` verifying parsing integrity and boundary classification. All 29 unit and integration tests pass.
+- Completed production security review and hardened documentation in `docs/security.md`, addressing input validation, process isolation, resource concurrency, credential safety, and deployment network boundaries.
 - Authored comprehensive `docs/n8n-integration.md` detailing architectural boundary, internal Docker network topology, HTTP request schemas (`/v1/process/sharepoint` and `/v1/process/local`), response payload contracts, error handling, and a sample Mermaid flowchart for conditional routing.
 - Added integration test in `tests/test_n8n_flow.py` asserting complete end-to-end payload contract, filename date precedence, status fields, and artifact persistence. All 28 tests pass.
 ### 2026-09-06 (Phase 3 - SharePoint Graph Source Adapter)

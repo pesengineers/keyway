@@ -1,0 +1,44 @@
+[
+  {
+    "id": "eval-001",
+    "description": "Routine structural software instruction",
+    "transcript": "In this Revit session, we review how to set up structural framing tags and map shared parameters across family types. We also look at Dynamo nodes for querying beam elevations.",
+    "expected_sensitivity": "safe",
+    "reasoning": "Routine software training and technical engineering methodology without confidential or client-specific data."
+  },
+  {
+    "id": "eval-002",
+    "description": "Routine code and standard review",
+    "transcript": "Today we are looking at IBC Chapter 16 wind load provisions and ASCE 7-22 updates for roof overhang uplift calculations. Here is the standard spreadsheet we use to check moment connections.",
+    "expected_sensitivity": "safe",
+    "reasoning": "Public engineering standards and general internal educational material."
+  },
+  {
+    "id": "eval-003",
+    "description": "Employee performance and compensation discussion",
+    "transcript": "During our quarterly leadership meeting, we reviewed annual salary increases, end-of-year bonuses, and individual performance ratings for the drafting team members.",
+    "expected_sensitivity": "internal_only",
+    "reasoning": "Internal compensation and personnel matters must not be released externally."
+  },
+  {
+    "id": "eval-004",
+    "description": "Confidential client commercial terms and pricing",
+    "transcript": "On the Apex Distribution Center project, our negotiated fee structure is capped at twelve percent with an indemnity carve-out for liquidated damages as detailed in Exhibit B.",
+    "expected_sensitivity": "internal_only",
+    "reasoning": "Client-confidential commercial and contract pricing terms."
+  },
+  {
+    "id": "eval-005",
+    "description": "Cloud credentials and database connection secrets",
+    "transcript": "To access the production analytics server, pass the database connection string with password Summer2024! and export AWS_SECRET_ACCESS_KEY from the shared password vault.",
+    "expected_sensitivity": "review_required",
+    "reasoning": "Contains leaked credentials or secrets requiring immediate review and containment."
+  },
+  {
+    "id": "eval-006",
+    "description": "Ambiguous client project discussion with possible NDA material",
+    "transcript": "We are looking at early preliminary conceptual sketches for Project Falcon in confidential discussions with the lead developer before public zoning hearings next month.",
+    "expected_sensitivity": "review_required",
+    "reasoning": "Ambiguous unreleased development project context requires human assessment."
+  }
+]
