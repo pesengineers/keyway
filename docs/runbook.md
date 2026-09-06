@@ -100,7 +100,7 @@ Expected on the P2000 for a ~1 h video: `device: cuda`, `compute_type: float32`,
 
 Needed for `POST /v1/process/sharepoint`. Skip if using a local mount. Repeatable; safe to re-run.
 
-Prerequisites: Windows PowerShell 5.1 or 7 with `Install-Module Microsoft.Graph -Scope CurrentUser`; an account that is Global Administrator or Application Administrator and can grant admin consent (the site grant additionally needs SharePoint admin rights, which the delegated `Sites.FullControl.All` scope requires at sign-in).
+Prerequisites: Windows PowerShell 5.1 or 7 with exactly two sub-modules installed: `Install-Module Microsoft.Graph.Authentication, Microsoft.Graph.Applications -Scope CurrentUser`. **Do not install the `Microsoft.Graph` meta-module**; it pulls in the entire SDK (dozens of modules, gigabytes) and is never needed here. Sign in as a Global Administrator or Application Administrator who can grant admin consent (the site grant additionally needs SharePoint admin rights, which the delegated `Sites.FullControl.All` scope requires at sign-in).
 
 ```powershell
 dev> .\scripts\New-KeywayGraphApp.ps1 -SiteId "pes1852.sharepoint.com,97c4bdef-10db-4a0a-b359-050ced66dd51,316269b2-8c0d-438a-9466-a3a1f9800a8a"

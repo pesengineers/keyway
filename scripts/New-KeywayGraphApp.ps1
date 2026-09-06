@@ -32,7 +32,8 @@
     .\scripts\New-KeywayGraphApp.ps1 -TenantWide -RotateSecret
 
 .NOTES
-    Requires: Install-Module Microsoft.Graph -Scope CurrentUser
+    Requires ONLY these two sub-modules (never the Microsoft.Graph meta-module):
+      Install-Module Microsoft.Graph.Authentication, Microsoft.Graph.Applications -Scope CurrentUser
     Delegated scopes requested at sign-in:
       Application.ReadWrite.All, AppRoleAssignment.ReadWrite.All,
       Directory.Read.All, and Sites.FullControl.All (only for the site grant).
