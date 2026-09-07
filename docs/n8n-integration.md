@@ -198,7 +198,7 @@ Four workflows, all deployed from SDK sources in `n8n/`. Operator instructions f
 
 | Workflow | ID | Source | Trigger |
 |---|---|---|---|
-| Keyway - Process Queue | `mp5gviKuHu9iIfPo` | `n8n/keyway-process-queue.workflow.ts` | schedule, 15 min |
+| Keyway - Process Queue | `mp5gviKuHu9iIfPo` | `n8n/keyway-process-queue.workflow.ts` | schedule, 5 min, 2 rows per run |
 | Keyway - Seed Queue | `S2RN9PNHdZFZoZYe` | `n8n/keyway-seed-queue.workflow.ts` | schedule, daily 06:00 (an earlier draft `KCS0Swhq1EECnpTM` is archived) |
 | Keyway - Reset Queue Rows | `DOCflW4upDwPt2D4` | `n8n/keyway-reset-rows.workflow.ts` | n8n form, login required (`n8nUserAuth`) |
 | Keyway - Queue Status | `GNv9dZFLTvgjTz9v` | `n8n/keyway-queue-status.workflow.ts` | n8n form, login required; renders HTML via a Form *completion* node (Respond to Webhook is rejected after a Form Trigger) |
@@ -211,7 +211,7 @@ Four workflows, all deployed from SDK sources in `n8n/`. Operator instructions f
 
 **`Keyway - Process Queue`**, id `mp5gviKuHu9iIfPo`, https://n8n.pesengineers.dev/workflow/mp5gviKuHu9iIfPo. Created **inactive**. Source of truth is `n8n/keyway-process-queue.workflow.ts` in this repo (n8n Workflow SDK code); the n8n copy is a deployment of that file.
 
-Shape: Schedule (15 min) → Config → Get One Pending Row (limit 1, oldest first) → loop → Mark Row Processing (+attemptCount, lastAttemptAt) → POST `/v1/process/sharepoint` (`fullResponse` + `neverError`, 30 min timeout) → Route By HTTP Status → for 200, Route By Sensitivity.
+Shape: Schedule (5 min; was 15 until 2026-09-07) → Config → Get Pending Rows (limit 2, oldest first; was 1) → loop → Mark Row Processing (+attemptCount, lastAttemptAt) → POST `/v1/process/sharepoint` (`fullResponse` + `neverError`, 30 min timeout) → Route By HTTP Status → for 200, Route By Sensitivity.
 
 | Outcome | Row status written | SharePoint write |
 |---|---|---|
@@ -224,7 +224,7 @@ Shape: Schedule (15 min) → Config → Get One Pending Row (limit 1, oldest fir
 Design notes:
 
 - Uses only existing columns of `video_metadata_queue`; the new information lives in the `status` vocabulary. Adding a `sensitivity` column would be cleaner but is a schema change to the shared table and needs approval (ADR 005).
-- One row per run because Keyway runs one job at a time; raising `limit` above 1 would just queue inside Keyway. Marking `processing` first prevents a double pick-up if a job outlasts the 15-minute interval.
+- Rows are processed sequentially inside the loop, so raising `limit` never sends Keyway concurrent jobs; it only removes idle time between videos. Marking `processing` first prevents a double pick-up if a run outlasts the interval. Changed 2026-09-07 from 15 min / 1 row to 5 min / 2 rows (throughput ~4/h → ~24/h; 279 rows ≈ 12 h).
 - `error` rows are **not** auto-retried. That is deliberate for the first weeks: a human looks at `errorMessage`, then flips `status` back to `pending`. Once the failure modes are understood, a "retry if attemptCount < 3" filter can be added to Get One Pending Row.
 - `job_id` sent to Keyway is `queue-<row id>`, so artifacts land at `/mnt/user/appdata/keyway/output/queue-<id>/`.
 - The SharePoint PATCH reuses credential `Sharepoint video process` (`icIlll1oh3FEHtYl`), the same one the frozen workflow uses.
@@ -272,5 +272,5 @@ Both require an n8n login (unauthenticated visitors are redirected to n8n's sign
 - [ ] Graph secret has been rotated.
 - [ ] Manual test run on one row succeeds end to end (row `done`, SharePoint fields populated).
 - [ ] Agree who reviews `flagged_*` and `error` rows and how often.
-- [ ] Activate. First cycle runs within 15 minutes; 281 rows at one per 15-minute cycle is roughly 3 days. Shorten the interval to 5 minutes once stable (Keyway takes about a minute per hour of video plus download time), which brings the backlog to about a day.
+- [x] Activated 2026-09-07. Interval now 5 min with 2 rows per run.
 

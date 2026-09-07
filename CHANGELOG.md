@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Process Queue schedule tightened to every 5 minutes with 2 rows per run (sequential), ~6x throughput.
 - Production go-live 2026-09-07: `Keyway - Process Queue` active; first row processed and written to SharePoint end to end.
 
 - n8n: add `Keyway - Queue Status`, a login-protected on-demand HTML progress report.

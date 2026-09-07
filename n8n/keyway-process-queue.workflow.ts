@@ -5,7 +5,7 @@
 // reviewable and reproducible. The frozen "PES Video Metadata - *" workflows are
 // not touched by this file.
 //
-// Flow: every 15 min take ONE pending row from video_metadata_queue, mark it
+// Flow: every 5 min take up to TWO pending rows (processed one at a time) from video_metadata_queue, mark it
 // processing, POST it to Keyway (/v1/process/sharepoint), then branch on the
 // HTTP status and on the sensitivity value:
 //   200 + safe             -> PATCH SharePoint fields -> status done
@@ -26,8 +26,8 @@ const every15 = trigger({
   type: 'n8n-nodes-base.scheduleTrigger',
   version: 1.4,
   config: {
-    name: 'Every 15 Minutes',
-    parameters: { rule: { interval: [{ field: 'minutes', minutesInterval: 15 }] } },
+    name: 'Every 5 Minutes',
+    parameters: { rule: { interval: [{ field: 'minutes', minutesInterval: 5 }] } },
   },
 });
 
@@ -55,7 +55,7 @@ const getPending = node({
   type: 'n8n-nodes-base.dataTable',
   version: 1.1,
   config: {
-    name: 'Get One Pending Row',
+    name: 'Get Pending Rows',
     parameters: {
       resource: 'row',
       operation: 'get',
@@ -63,7 +63,7 @@ const getPending = node({
       matchType: 'allConditions',
       filters: { conditions: [{ keyName: 'status', condition: 'eq', keyValue: 'pending' }] },
       returnAll: false,
-      limit: 1,
+      limit: 2,
       orderBy: true,
       orderByColumn: 'id',
       orderByDirection: 'ASC',
@@ -341,7 +341,7 @@ const notes = sticky(
 );
 
 const notePickup = sticky(
-  '### 1. Pick up one row\nEvery 15 min. Takes the OLDEST row with status=pending (one at a time, because Keyway runs one job at a time).\n\nThe loop marks it `processing` first so a long job is never picked up twice.\n\nTo reprocess a row: use the **Keyway - Reset Queue Rows** form. Never edit statuses by hand in the table while this is active.',
+  '### 1. Pick up one row\nEvery 5 min. Takes the two OLDEST rows with status=pending and processes them one after the other (Keyway runs one job at a time).\n\nThe loop marks it `processing` first so a long job is never picked up twice.\n\nTo reprocess a row: use the **Keyway - Reset Queue Rows** form. Never edit statuses by hand in the table while this is active.',
   [config, getPending, loop],
   { name: 'Note: Pickup', color: 7 },
 );
