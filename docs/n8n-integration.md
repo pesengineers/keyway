@@ -253,6 +253,7 @@ SDK quirks learned: `sticky(text, nodes?, config?)` is positional, not `sticky({
 ### Go-live record
 
 - 2026-09-07 00:05 UTC, execution 2507 (manual): row 1 `2021-08-19 12.01 P_T (SCS).mp4`. Keyway 200 in 57 s (41 s transcription, cuda/float32). `safe`, "No listed category was present." Title "Using Dynamo for Efficient Revit Management". Filename date 2021-08-19 written as `Presentation_x0020_Date`; model's guessed date discarded by the evidence gate (warning recorded). Graph PATCH succeeded, item `Modified` 00:06:56Z. Row `done`, attemptCount 3 (two earlier failed attempts during the secret incident).
+- 2026-09-07 00:15 UTC, execution 2508, **first scheduled (unattended) run**: row 2 `2021-11-18 12.02 P_T (SCS).mp4` (37 min). 138 s transcription, 151 s total. `safe`, title "Updates on Engineering Design Guides and Tools", filename date written, guessed date discarded. This is the item the local 3B model had misclassified as `internal_only` the day before.
 - 2026-09-07 00:08 UTC: `publish_workflow` on Process Queue, active version `33171b76-8bfa-4cfa-a94c-8a290b45b6ee`. All three Keyway workflows active.
 
 ### Activation checklist
