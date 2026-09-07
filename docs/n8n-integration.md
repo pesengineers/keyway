@@ -254,6 +254,10 @@ Form Trigger v2.6 takes its custom URL from `options.path`; the top-level `path`
 
 Both require an n8n login (unauthenticated visitors are redirected to n8n's sign-in). Earlier drafts (`OcJXxuHTvgEWE56i`, `U2h9cJTWhJ9UBVPZ`) are archived.
 
+### Overlap guard (2026-09-07)
+
+Runs frequently outlast the 5-minute interval, so several executions are queued on the Keyway HTTP call at once. Each loop iteration now **re-reads its row** (`Re-read Row`) and continues only if `status` is still `pending` (`Still Pending?`); otherwise it goes straight to the next batch. Version `ce9c572e`. Verified: 36 rows processed, 36 output directories, no duplicates.
+
 ### Resilience settings (2026-09-06)
 
 - All three workflows have **Settings > Error workflow** = `Send Error to Sentry` (`IQ3r3rK0FdZl4E0Q`, an existing active workflow on the instance). A red execution therefore reaches the team's Sentry.

@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Fix: application logs were not emitted when running under Uvicorn.
+- n8n: Process Queue re-reads each row before claiming it, so overlapping scheduled runs cannot process the same video twice.
 - Process Queue schedule tightened to every 5 minutes with 2 rows per run (sequential), ~6x throughput.
 - Production go-live 2026-09-07: `Keyway - Process Queue` active; first row processed and written to SharePoint end to end.
 

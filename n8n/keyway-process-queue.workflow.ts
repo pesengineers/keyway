@@ -76,6 +76,41 @@ const loop = splitInBatches({
   config: { name: 'Process Queue Loop', parameters: { batchSize: 1 } },
 });
 
+// Guard against overlapping runs: with a 5-minute schedule and jobs that can
+// take longer, two executions may both read the same pending rows. Re-read the
+// row right before claiming it and skip if another run already took it.
+const rereadRow = node({
+  type: 'n8n-nodes-base.dataTable',
+  version: 1.1,
+  config: {
+    name: 'Re-read Row',
+    alwaysOutputData: true,
+    parameters: {
+      resource: 'row',
+      operation: 'get',
+      dataTableId: QUEUE_TABLE,
+      matchType: 'allConditions',
+      filters: { conditions: [{ keyName: 'id', condition: 'eq', keyValue: expr("{{ $('Process Queue Loop').item.json.id }}") }] },
+      returnAll: false,
+      limit: 1,
+    },
+  },
+});
+
+const stillPending = ifElse({
+  version: 2.2,
+  config: {
+    name: 'Still Pending?',
+    parameters: {
+      conditions: {
+        options: { caseSensitive: true, leftValue: '', typeValidation: 'loose' },
+        conditions: [{ leftValue: expr('{{ $json.status }}'), operator: { type: 'string', operation: 'equals' }, rightValue: 'pending' }],
+        combinator: 'and',
+      },
+    },
+  },
+});
+
 const markProcessing = node({
   type: 'n8n-nodes-base.dataTable',
   version: 1.1,
@@ -368,18 +403,24 @@ export default workflow('keyway-process-queue', 'Keyway - Process Queue')
   .to(getPending)
   .to(
     loop.onEachBatch(
-      markProcessing.to(
-        callKeyway.to(
-          routeStatus
-            .onCase(0,
-              routeSensitivity
-                .onCase(0, writeSharePoint.to(markDone.to(nextBatch(loop))))
-                .onCase(1, markInternal.to(nextBatch(loop)))
-                .onCase(2, markReview.to(nextBatch(loop))),
-            )
-            .onCase(1, markUnprocessable.to(nextBatch(loop)))
-            .onCase(2, markError.to(nextBatch(loop))),
-        ),
+      rereadRow.to(
+        stillPending
+          .onTrue(
+            markProcessing.to(
+              callKeyway.to(
+                routeStatus
+                  .onCase(0,
+                    routeSensitivity
+                      .onCase(0, writeSharePoint.to(markDone.to(nextBatch(loop))))
+                      .onCase(1, markInternal.to(nextBatch(loop)))
+                      .onCase(2, markReview.to(nextBatch(loop))),
+                  )
+                  .onCase(1, markUnprocessable.to(nextBatch(loop)))
+                  .onCase(2, markError.to(nextBatch(loop))),
+              ),
+            ),
+          )
+          .onFalse(nextBatch(loop)),
       ),
     ),
   );
