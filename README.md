@@ -85,6 +85,7 @@ Filename dates use a leading valid `YYYY-MM-DD` and take precedence over model i
 - [Deployment journal](docs/deployment-journal.md): what has been done, when, and what is next
 - [Architecture](docs/architecture.md) and [decision records](docs/decisions/README.md)
 - [Security](docs/security.md)
+- [Lessons learned](docs/lessons-learned.md): the non-obvious traps hit during build and deployment, as rules
 - [Unraid and NVIDIA deployment](docs/unraid-deployment.md): host facts, SSH, GPU UUIDs, Ollama, benchmarks
 - [n8n integration](docs/n8n-integration.md): live instance survey, existing workflows, contract, field mapping
 

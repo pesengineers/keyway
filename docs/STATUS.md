@@ -94,4 +94,5 @@ Result lands in `/mnt/user/appdata/keyway/output/manual-1/`.
 | Host facts, SSH, GPUs, Ollama template values, benchmarks | `docs/unraid-deployment.md` |
 | n8n instance survey, existing workflows, contract, error codes | `docs/n8n-integration.md` |
 | Security posture | `docs/security.md` |
+| Traps already hit, as rules | `docs/lessons-learned.md` |
 | Behavior changes | `CHANGELOG.md` |

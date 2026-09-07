@@ -18,6 +18,7 @@ Keyway is a single-container worker that turns an internal training video into a
 | Unraid host, GPU UUIDs, SSH, Ollama, benchmarks | `docs/unraid-deployment.md` |
 | n8n contract, existing workflows, SharePoint IDs | `docs/n8n-integration.md` |
 | Security posture and boundaries | `docs/security.md` |
+| Traps already hit once, as rules (read before touching Unraid, n8n, or secrets) | `docs/lessons-learned.md` |
 | Open work | GitHub issues on `pesengineers/keyway` |
 
 ## Hard rules
