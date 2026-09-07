@@ -190,6 +190,7 @@ Two Unraid GUI pitfalls seen on first creation:
 
 - A **leading space in a host path** field makes Docker treat it as a named volume and fail with `includes invalid characters for a local volume name`. Paths must start with `/`. When repairing the template XML by hand, note each `<Config>` stores the value twice: in the `Default=` attribute and as the element text; the GUI reads the element text, so fix both.
 - On Apply, Unraid prints the full `docker run` command **including masked variables in plaintext**. Do not copy that output into chat, tickets, or logs. If it leaks, rotate the secret.
+- **After rotating any secret, verify the value in the template file**, not just the running container: `grep -oE 'Target="GRAPH_CLIENT_SECRET"[^>]*' /boot/config/plugins/dockerMan/templates-user/my-keyway.xml | grep -c <first-3-chars-of-new-secret>`. The GUI Edit form pre-fills from that file, so if a rotation only reached the container (or an Edit tab was opened before the rotation was saved), the next Apply for an unrelated change silently reverts the secret. This happened on 2026-09-06 and produced `AADSTS7000215` hours after a successful rotation.
 
 ### 1.9 Attach n8n
 
