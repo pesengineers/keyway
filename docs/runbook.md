@@ -336,6 +336,7 @@ Sources of truth are the SDK files in `n8n/`; the workflows on the instance are 
 3. New workflow: `create_workflow_from_code`. Existing workflow: prefer `update_workflow` operations (`updateNodeParameters`, `setNodeSettings`, `addNode`, `setWorkflowSettings`) so the workflow id, webhook ids, and execution history are kept. Re-creating from code changes the id; if you must, `unpublish_workflow` + `archive_workflow` the old one first.
 4. `setWorkflowSettings` with `errorWorkflow: "IQ3r3rK0FdZl4E0Q"` (Send Error to Sentry) on anything new.
 5. `publish_workflow`. Publishing is what registers webhooks/forms; a draft is not reachable by URL.
+6. **For scheduled workflows, confirm the schedule actually re-armed**: wait one interval and check `search_workflow_executions`, or on the host `docker logs --since 5m n8n | grep -i cron`. On 2026-09-07 an API unpublish/publish left Process Queue with "Deregistered all crons" and no re-registration while the API reported success; toggling Active off/on in the UI fixed it. The `webhook_entity` / `workflow_entity.activeVersionId` check below shows the truth when the API and reality disagree.
 
 ### Verify a form-triggered workflow is really reachable
 
