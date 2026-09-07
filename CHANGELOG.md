@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Production go-live 2026-09-07: `Keyway - Process Queue` active; first row processed and written to SharePoint end to end.
+
 - n8n: add `Keyway - Seed Queue` (daily, paginated Graph listing with de-duplication) and `Keyway - Reset Queue Rows` (login-protected form) alongside `Keyway - Process Queue`; add canvas notes, continue-on-error for the Keyway call, and route failures to the existing Sentry error workflow.
 - Add `docs/operations.md`, a non-developer guide to statuses, the weekly review, resets, and troubleshooting.
 

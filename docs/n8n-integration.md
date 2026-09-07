@@ -250,6 +250,11 @@ SDK quirks learned: `sticky(text, nodes?, config?)` is positional, not `sticky({
 - The Keyway HTTP node in Process Queue has **On Error = Continue (regular output)** in addition to `neverError`. HTTP errors already flowed through as status codes; this covers connection-level failures (Keyway container down, DNS). Such rows get `status=error`, `errorMessage=Request to Keyway failed: ...` instead of being stuck in `processing` with a red run.
 - Canvas has three section notes (pickup, Keyway call, routing) written for operators; source in `n8n/keyway-process-queue.workflow.ts`.
 
+### Go-live record
+
+- 2026-09-07 00:05 UTC, execution 2507 (manual): row 1 `2021-08-19 12.01 P_T (SCS).mp4`. Keyway 200 in 57 s (41 s transcription, cuda/float32). `safe`, "No listed category was present." Title "Using Dynamo for Efficient Revit Management". Filename date 2021-08-19 written as `Presentation_x0020_Date`; model's guessed date discarded by the evidence gate (warning recorded). Graph PATCH succeeded, item `Modified` 00:06:56Z. Row `done`, attemptCount 3 (two earlier failed attempts during the secret incident).
+- 2026-09-07 00:08 UTC: `publish_workflow` on Process Queue, active version `33171b76-8bfa-4cfa-a94c-8a290b45b6ee`. All three Keyway workflows active.
+
 ### Activation checklist
 
 - [ ] Keyway container is on the image that returns 422 for silence (commit `314281a` or later).

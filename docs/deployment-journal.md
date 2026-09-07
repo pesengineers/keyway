@@ -71,6 +71,11 @@ This journal tracks all completed, in-progress, and pending operational tasks ac
 
 ## Session Activity Log
 
+### 2026-09-07 (go-live)
+- Root cause of the recurring `AADSTS7000215`: the Unraid template file still held the original leaked secret; the GUI Edit at 22:24 pre-filled from it and reverted the rotation, after which the (correct) deletion of the old secret in Entra made the container's credential dead. Fingerprinting template vs `.bak` vs container (`uNY…dji` everywhere) proved it. User pasted the rotated value and blanked the template's `Default=` attribute so future edits cannot regress it. Token test 200.
+- Manual Process Queue run 2507 on row 1: full success including SharePoint PATCH (see n8n doc, Go-live record). Published Process Queue (`33171b76`). Pipeline in production at 00:08 UTC.
+- Lesson recorded in runbook 1.8: always verify a rotated secret in the template file, not only the running container.
+
 ### 2026-09-06 (autonomous continuation: helpers, operator docs, blocked on Graph secret)
 - No MCP tool updates data-table rows, so built `Keyway - Reset Queue Rows` (`U2h9cJTWhJ9UBVPZ`): form trigger with `n8nUserAuth`, Code node splits ids, data-table update sets `pending` and clears result fields. Used it to reset rows 1 and 2 (execution 2502).
 - Manual Process Queue run 2503 on row 1: Keyway 502, `OAuth token request failed with HTTP 401`, Entra `AADSTS7000215 Invalid client secret`. Template and container values match (40 chars); the same value worked at ~16:14. User action required. Row 1 reset again (attemptCount 2).
