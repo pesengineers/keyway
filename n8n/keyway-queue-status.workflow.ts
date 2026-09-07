@@ -17,11 +17,11 @@ const form = trigger({
     name: 'Status Form',
     parameters: {
       authentication: 'n8nUserAuth',
-      path: 'keyway-status',
       formTitle: 'Keyway: queue status',
       formDescription: 'Press Submit for a snapshot of the video metadata queue.',
       formFields: { values: [{ fieldName: 'refresh', fieldLabel: 'Refresh', fieldType: 'hiddenField', fieldValue: '1' }] },
-      options: { appendAttribution: false },
+      // Form Trigger v2.6 reads the custom URL path from options.path; the top-level `path` is ignored.
+      options: { appendAttribution: false, path: 'keyway-status' },
     },
   },
 });

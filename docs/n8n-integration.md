@@ -247,10 +247,10 @@ SDK quirks learned: `sticky(text, nodes?, config?)` is positional, not `sticky({
 
 ### Form URLs
 
-Forms created through the API register only under the trigger node's **webhook ID**, not the custom `path`; `/form/keyway-status` returns "Problem loading form" while `/form/<webhookId>` works. Use these:
+Form Trigger v2.6 takes its custom URL from `options.path`; the top-level `path` parameter (which the SDK typings still show) is ignored and the form registers under the node's webhook ID only. Both workflows now set `options.path`, so these friendly URLs work (the webhook-ID URLs `5070906c-…` and `b41bccc7-…` remain valid aliases):
 
-- Queue Status: https://n8n.pesengineers.dev/form/5070906c-eff2-4735-ae23-5d0aa8538ed6
-- Reset Queue Rows: https://n8n.pesengineers.dev/form/b41bccc7-d898-47fb-b32e-c393fabdc55b
+- Queue Status: https://n8n.pesengineers.dev/form/keyway-status
+- Reset Queue Rows: https://n8n.pesengineers.dev/form/keyway-reset-rows
 
 Both require an n8n login (unauthenticated visitors are redirected to n8n's sign-in). Earlier drafts (`OcJXxuHTvgEWE56i`, `U2h9cJTWhJ9UBVPZ`) are archived.
 

@@ -46,8 +46,8 @@ Keyway is deployed and working on the production Unraid host `pes-dev` with a ro
 - Credential `OpenRouter Dailen Personal` (`v05xhPoiZRswGKCS`, type `openRouterApi`) exists in n8n; its value is not readable via API, so the same key is entered separately in the Keyway template. No OpenAI credential exists on the instance.
 - **`Keyway - Process Queue`** (`mp5gviKuHu9iIfPo`), **active since 2026-09-07 00:08 UTC**, version `33171b76`. Execution 2507 was the first success (row 1 `done`, SharePoint PATCH confirmed). Canvas has section notes; Keyway HTTP node continues on connection errors; error workflow `Send Error to Sentry`.
 - **`Keyway - Seed Queue`** (`S2RN9PNHdZFZoZYe`), **active**, daily 06:00. Verified: 281 in folder, 281 queued, 0 inserted.
-- **`Keyway - Reset Queue Rows`** (`DOCflW4upDwPt2D4`), **active**. Form: https://n8n.pesengineers.dev/form/b41bccc7-d898-47fb-b32e-c393fabdc55b (n8n login required; anonymous gets 404).
-- **`Keyway - Queue Status`** (`GNv9dZFLTvgjTz9v`), **active**. Read-only HTML progress report at https://n8n.pesengineers.dev/form/5070906c-eff2-4735-ae23-5d0aa8538ed6 (login required).
+- **`Keyway - Reset Queue Rows`** (`DOCflW4upDwPt2D4`), **active**. Form: https://n8n.pesengineers.dev/form/keyway-reset-rows (n8n login required; anonymous gets 404).
+- **`Keyway - Queue Status`** (`GNv9dZFLTvgjTz9v`), **active**. Read-only HTML progress report at https://n8n.pesengineers.dev/form/keyway-status (login required).
 - All four have `errorWorkflow` = `Send Error to Sentry` (`IQ3r3rK0FdZl4E0Q`).
 
 ### Workstation

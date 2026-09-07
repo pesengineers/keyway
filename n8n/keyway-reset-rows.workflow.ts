@@ -20,7 +20,6 @@ const form = trigger({
     name: 'Reset Rows Form',
     parameters: {
       authentication: 'n8nUserAuth',
-      path: 'keyway-reset-rows',
       formTitle: 'Keyway: reset queue rows',
       formDescription:
         'Puts the listed video_metadata_queue rows back to status=pending and clears prior results so Keyway - Process Queue reprocesses them on its next run.',
@@ -34,7 +33,8 @@ const form = trigger({
           },
         ],
       },
-      options: { appendAttribution: false },
+      // Form Trigger v2.6 reads the custom URL path from options.path; the top-level `path` is ignored.
+      options: { appendAttribution: false, path: 'keyway-reset-rows' },
     },
   },
 });
