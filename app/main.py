@@ -44,6 +44,16 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     @asynccontextmanager
     async def lifespan(application: FastAPI) -> AsyncIterator[None]:
         active_settings = settings or get_settings()
+        # Uvicorn configures only its own loggers; without this the app's
+        # processing_started/completed lines are silently dropped.
+        app_logger = logging.getLogger("app")
+        if not app_logger.handlers:
+            handler = logging.StreamHandler()
+            handler.setFormatter(
+                logging.Formatter("%(asctime)s %(levelname)s %(name)s %(message)s")
+            )
+            app_logger.addHandler(handler)
+        app_logger.setLevel(active_settings.log_level.upper())
         logging.getLogger("httpx").setLevel(logging.WARNING)
         logging.getLogger("httpcore").setLevel(logging.WARNING)
         active_settings.prepare_directories()
