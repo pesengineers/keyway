@@ -1,7 +1,8 @@
 // Keyway - Queue Status
 //
 // Operator report. Open the form URL (n8n login required), press Submit, and
-// get a page with: counts by status, the most recent completed videos, and every
+// get a page (rendered by a Form completion node; Respond to Webhook is not
+// allowed after a Form Trigger) with: counts by status, the most recent completed videos, and every
 // row that needs a human (flagged or error) with its reason. Read-only; touches
 // nothing. Deployed with the n8n MCP tool (docs/n8n-integration.md section 6).
 
@@ -20,7 +21,6 @@ const form = trigger({
       formTitle: 'Keyway: queue status',
       formDescription: 'Press Submit for a snapshot of the video metadata queue.',
       formFields: { values: [{ fieldName: 'refresh', fieldLabel: 'Refresh', fieldType: 'hiddenField', fieldValue: '1' }] },
-      responseMode: 'lastNode',
       options: { appendAttribution: false },
     },
   },
@@ -71,14 +71,14 @@ return [{ json: { html } }];`,
 });
 
 const respond = node({
-  type: 'n8n-nodes-base.respondToWebhook',
-  version: 1.4,
+  type: 'n8n-nodes-base.form',
+  version: 2.5,
   config: {
     name: 'Show Report',
     parameters: {
-      respondWith: 'text',
-      responseBody: expr('{{ $json.html }}'),
-      options: { responseHeaders: { entries: [{ name: 'Content-Type', value: 'text/html; charset=utf-8' }] } },
+      operation: 'completion',
+      respondWith: 'showText',
+      responseText: expr('{{ $json.html }}'),
     },
   },
 });

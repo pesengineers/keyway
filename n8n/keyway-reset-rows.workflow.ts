@@ -34,7 +34,6 @@ const form = trigger({
           },
         ],
       },
-      responseMode: 'onReceived',
       options: { appendAttribution: false },
     },
   },
@@ -89,6 +88,21 @@ const resetRow = node({
   },
 });
 
+const confirm = node({
+  type: 'n8n-nodes-base.form',
+  version: 2.5,
+  config: {
+    name: 'Confirm Reset',
+    executeOnce: true,
+    parameters: {
+      operation: 'completion',
+      respondWith: 'text',
+      completionTitle: 'Rows reset',
+      completionMessage: expr("{{ $('Set Row Pending').all().length }} row(s) set back to pending. Keyway - Process Queue will pick them up on its next 15-minute cycle."),
+    },
+  },
+});
+
 const notes = sticky(
   '## Keyway - Reset Queue Rows\n\nOperator tool. Open the form (Reset Rows Form node > Form URL; requires n8n login), enter row ids, submit.\n\nEach id is set back to status=pending with title/synopsis/date/sensitivity/error cleared. attemptCount is kept on purpose so repeated failures stay visible.\n\nSource: pesengineers/keyway, n8n/keyway-reset-rows.workflow.ts. Does not touch the frozen "PES Video Metadata - *" workflows.',
   undefined,
@@ -99,4 +113,5 @@ export default workflow('keyway-reset-rows', 'Keyway - Reset Queue Rows')
   .add(notes)
   .add(form)
   .to(splitIds)
-  .to(resetRow);
+  .to(resetRow)
+  .to(confirm);

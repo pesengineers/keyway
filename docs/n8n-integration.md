@@ -200,8 +200,8 @@ Four workflows, all deployed from SDK sources in `n8n/`. Operator instructions f
 |---|---|---|---|
 | Keyway - Process Queue | `mp5gviKuHu9iIfPo` | `n8n/keyway-process-queue.workflow.ts` | schedule, 15 min |
 | Keyway - Seed Queue | `S2RN9PNHdZFZoZYe` | `n8n/keyway-seed-queue.workflow.ts` | schedule, daily 06:00 (an earlier draft `KCS0Swhq1EECnpTM` is archived) |
-| Keyway - Reset Queue Rows | `U2h9cJTWhJ9UBVPZ` | `n8n/keyway-reset-rows.workflow.ts` | n8n form, login required (`n8nUserAuth`) |
-| Keyway - Queue Status | `OcJXxuHTvgEWE56i` | `n8n/keyway-queue-status.workflow.ts` | n8n form at `/form/keyway-status`, login required; renders an HTML report via Respond to Webhook |
+| Keyway - Reset Queue Rows | `DOCflW4upDwPt2D4` | `n8n/keyway-reset-rows.workflow.ts` | n8n form, login required (`n8nUserAuth`) |
+| Keyway - Queue Status | `GNv9dZFLTvgjTz9v` | `n8n/keyway-queue-status.workflow.ts` | n8n form, login required; renders HTML via a Form *completion* node (Respond to Webhook is rejected after a Form Trigger) |
 
 **Seed Queue** reuses the frozen seeder's Graph listing (same folder, `$expand=listItem`, `@odata.nextLink` paging, credential `Sharepoint video process`) and adds de-duplication: it loads every `driveItemId` already in the table once (`executeOnce`) and a Code node keeps only unseen files. Verified 2026-09-06: 281 files in the folder, 281 already queued, 0 inserted. (n8n's `rowNotExists` operation also returned 0 in that situation and was replaced only because the explicit version logs its counts.)
 
@@ -244,6 +244,15 @@ SDK quirks learned: `sticky(text, nodes?, config?)` is positional, not `sticky({
 
 - Execution 2500: Keyway returned 502 (`OAuth token request failed with HTTP 401`) because the Graph secret had just been deleted in Entra; the workflow correctly wrote `status=error` with the cause. Row 1.
 - Execution 2501: row 2 (`2021-11-18 12.02 P_T (SCS).mp4`, 37 min) processed in about 2.5 min; `llama3.2:3b` classified it `internal_only` for being "technical and specialized", which is wrong. The workflow correctly parked it as `flagged_internal` and did not write to SharePoint. This triggered the switch to OpenRouter (ADR 006). Rows 1 and 2 need `status` reset to `pending` to be reprocessed.
+
+### Form URLs
+
+Forms created through the API register only under the trigger node's **webhook ID**, not the custom `path`; `/form/keyway-status` returns "Problem loading form" while `/form/<webhookId>` works. Use these:
+
+- Queue Status: https://n8n.pesengineers.dev/form/5070906c-eff2-4735-ae23-5d0aa8538ed6
+- Reset Queue Rows: https://n8n.pesengineers.dev/form/b41bccc7-d898-47fb-b32e-c393fabdc55b
+
+Both require an n8n login (unauthenticated visitors are redirected to n8n's sign-in). Earlier drafts (`OcJXxuHTvgEWE56i`, `U2h9cJTWhJ9UBVPZ`) are archived.
 
 ### Resilience settings (2026-09-06)
 
