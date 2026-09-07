@@ -325,6 +325,40 @@ The workflow authenticates with the automatic `GITHUB_TOKEN` (`packages: write`)
 
 ---
 
+## 3b. n8n workflows
+
+Sources of truth are the SDK files in `n8n/`; the workflows on the instance are deployments of them. Ids and URLs are listed in `docs/n8n-integration.md` section 6.
+
+### Deploy or change a workflow
+
+1. Edit the `.workflow.ts` file.
+2. Through the MCP server (`n8n-pesdev`): call `get_workflow_sdk_reference` once per session, then `validate_workflow` with the file contents until it reports `valid: true` **and no warnings** (a warning at create time becomes a broken node).
+3. New workflow: `create_workflow_from_code`. Existing workflow: prefer `update_workflow` operations (`updateNodeParameters`, `setNodeSettings`, `addNode`, `setWorkflowSettings`) so the workflow id, webhook ids, and execution history are kept. Re-creating from code changes the id; if you must, `unpublish_workflow` + `archive_workflow` the old one first.
+4. `setWorkflowSettings` with `errorWorkflow: "IQ3r3rK0FdZl4E0Q"` (Send Error to Sentry) on anything new.
+5. `publish_workflow`. Publishing is what registers webhooks/forms; a draft is not reachable by URL.
+
+### Verify a form-triggered workflow is really reachable
+
+The MCP `execute_workflow` test bypasses the webhook layer and proves nothing about the URL. Check from inside the container:
+
+```sh
+host$ docker exec n8n wget -qS -O /dev/null http://localhost:5678/form/<path> 2>&1 | grep -m1 HTTP/
+```
+
+`302` (redirect to n8n login) means registered and protected; `404` means not registered. To see what n8n actually registered, read its own table on a scratch copy of the database (never open the live file):
+
+```sh
+host$ rm -rf /tmp/n8ndb && mkdir /tmp/n8ndb && for f in database.sqlite database.sqlite-wal database.sqlite-shm; do docker cp n8n:/home/node/.n8n/$f /tmp/n8ndb/; done && chmod -R a+rwX /tmp/n8ndb
+host$ docker run --rm -v /tmp/n8ndb:/w keinos/sqlite3 sqlite3 "file:/w/database.sqlite?immutable=1" "select workflowId, webhookPath, method from webhook_entity;"
+host$ rm -rf /tmp/n8ndb
+```
+
+Known Form Trigger (v2.6) rules, learned the hard way: the custom URL must be in `options.path` (top-level `path` is ignored and the form registers under its webhook id only); the response page must come from a Form node in `completion` mode (`respondWith: showText` for HTML), not from Respond to Webhook, which n8n rejects at request time.
+
+### Run a workflow from the API
+
+`execute_workflow` with `executionMode: "manual"`; for form-triggered workflows add `triggerNodeName` and `inputs: {"formData": {...}}`. Poll `get_workflow_execution` with `includeData: true` to read node outputs. Keep polling loops short (the Process Queue run takes 1 to 3 minutes; poll every 10 s from separate calls rather than one long blocking loop).
+
 ## 4. Credentials and where they live
 
 | Secret | Location | Used by |

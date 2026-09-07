@@ -8,7 +8,7 @@ Training videos live in SharePoint under **PES Documents / Continuing Education 
 
 ## Checking progress: which videos are done?
 
-Fastest: open **https://n8n.pesengineers.dev/form/keyway-status** (log in to n8n if asked) and press Submit. You get a page with the completion percentage, counts by status, every row that needs a person (with the reason), and the most recent completions with links to the videos. Refresh by submitting again. Bookmark it.
+Fastest: open **https://n8n.pesengineers.dev/form/keyway-status** (log in to n8n if asked) and press Submit. If you see "Problem loading form", the workflow is deactivated or its form path changed; see `docs/runbook.md` section 6. You get a page with the completion percentage, counts by status, every row that needs a person (with the reason), and the most recent completions with links to the videos. Refresh by submitting again. Bookmark it.
 
 Other views: the `video_metadata_queue` data table in n8n (filter by `status`), the **Executions** tab of *Keyway - Process Queue* (one run per video with timings), or the SharePoint library sorted by Modified (completed items have Title and Synopsis filled).
 
@@ -48,7 +48,7 @@ Open it in n8n: left sidebar, **Data tables**, `video_metadata_queue`. Filter by
 
 ## Resetting rows
 
-Open **Keyway - Reset Queue Rows**, click the **Reset Rows Form** node, open its **Form URL** (you must be logged in to n8n), enter the row `id` values separated by commas, submit. Each row goes back to `pending` with its old result cleared. The next Process Queue cycle picks them up.
+Open **https://n8n.pesengineers.dev/form/keyway-reset-rows** (log in to n8n if asked), enter the row `id` values separated by commas, submit. A confirmation page shows how many rows were reset. Each row goes back to `pending` with its old result cleared. The next Process Queue cycle picks them up.
 
 ## Where the transcripts are
 
