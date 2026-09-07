@@ -72,6 +72,7 @@ This journal tracks all completed, in-progress, and pending operational tasks ac
 ## Session Activity Log
 
 ### 2026-09-07 (go-live)
+- Added `Keyway - Queue Status` (`OcJXxuHTvgEWE56i`): form trigger with `n8nUserAuth` → load all rows → Code node renders HTML (progress bar, counts, needs-a-human table, recent completions, stuck-processing warning) → Respond to Webhook. Published; anonymous access 404. Answers "which are complete?" without touching the table UI.
 - Root cause of the recurring `AADSTS7000215`: the Unraid template file still held the original leaked secret; the GUI Edit at 22:24 pre-filled from it and reverted the rotation, after which the (correct) deletion of the old secret in Entra made the container's credential dead. Fingerprinting template vs `.bak` vs container (`uNY…dji` everywhere) proved it. User pasted the rotated value and blanked the template's `Default=` attribute so future edits cannot regress it. Token test 200.
 - Manual Process Queue run 2507 on row 1: full success including SharePoint PATCH (see n8n doc, Go-live record). Published Process Queue (`33171b76`). Pipeline in production at 00:08 UTC.
 - Lesson recorded in runbook 1.8: always verify a rotated secret in the template file, not only the running container.

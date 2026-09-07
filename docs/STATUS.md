@@ -47,7 +47,8 @@ Keyway is deployed and working on the production Unraid host `pes-dev` with a ro
 - **`Keyway - Process Queue`** (`mp5gviKuHu9iIfPo`), **active since 2026-09-07 00:08 UTC**, version `33171b76`. Execution 2507 was the first success (row 1 `done`, SharePoint PATCH confirmed). Canvas has section notes; Keyway HTTP node continues on connection errors; error workflow `Send Error to Sentry`.
 - **`Keyway - Seed Queue`** (`S2RN9PNHdZFZoZYe`), **active**, daily 06:00. Verified: 281 in folder, 281 queued, 0 inserted.
 - **`Keyway - Reset Queue Rows`** (`U2h9cJTWhJ9UBVPZ`), **active**. Form: https://n8n.pesengineers.dev/form/keyway-reset-rows (n8n login required; anonymous gets 404).
-- All three have `errorWorkflow` = `Send Error to Sentry` (`IQ3r3rK0FdZl4E0Q`).
+- **`Keyway - Queue Status`** (`OcJXxuHTvgEWE56i`), **active**. Read-only HTML progress report at https://n8n.pesengineers.dev/form/keyway-status (login required).
+- All four have `errorWorkflow` = `Send Error to Sentry` (`IQ3r3rK0FdZl4E0Q`).
 
 ### Workstation
 

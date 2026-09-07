@@ -6,10 +6,17 @@ For whoever keeps the video-metadata pipeline running. No coding required. If so
 
 Training videos live in SharePoint under **PES Documents / Continuing Education / Recordings & Video User Guides**. A queue table in n8n lists every video and its status. Every 15 minutes n8n takes the oldest *pending* video and hands it to **Keyway**, a service on the `pes-dev` server. Keyway downloads the video, transcribes it on the GPU, asks an AI model for a title, synopsis, sensitivity rating and (if spoken) the presentation date, and returns the result. If the video is rated **safe**, n8n writes Title, Synopsis and Presentation Date onto the SharePoint item. If it is rated **internal_only** or **review_required**, nothing is written and the row waits for a person to look at it.
 
-## The three workflows (n8n at https://n8n.pesengineers.dev)
+## Checking progress: which videos are done?
+
+Fastest: open **https://n8n.pesengineers.dev/form/keyway-status** (log in to n8n if asked) and press Submit. You get a page with the completion percentage, counts by status, every row that needs a person (with the reason), and the most recent completions with links to the videos. Refresh by submitting again. Bookmark it.
+
+Other views: the `video_metadata_queue` data table in n8n (filter by `status`), the **Executions** tab of *Keyway - Process Queue* (one run per video with timings), or the SharePoint library sorted by Modified (completed items have Title and Synopsis filled).
+
+## The four workflows (n8n at https://n8n.pesengineers.dev)
 
 | Workflow | Runs | Purpose |
 |---|---|---|
+| **Keyway - Queue Status** | on demand (form) | read-only progress report at `/form/keyway-status` |
 | **Keyway - Process Queue** | every 15 min | processes one pending row per run |
 | **Keyway - Seed Queue** | daily 06:00 | finds new videos in the SharePoint folder and adds them as pending; safe to run any time |
 | **Keyway - Reset Queue Rows** | on demand (form) | puts rows back to pending so they get processed again |

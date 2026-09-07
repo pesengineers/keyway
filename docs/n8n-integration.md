@@ -194,13 +194,14 @@ graph TD
 
 ## 6. The Keyway workflows (created 2026-09-06)
 
-Three workflows, all deployed from SDK sources in `n8n/`. Operator instructions for them are in `docs/operations.md`.
+Four workflows, all deployed from SDK sources in `n8n/`. Operator instructions for them are in `docs/operations.md`.
 
 | Workflow | ID | Source | Trigger |
 |---|---|---|---|
 | Keyway - Process Queue | `mp5gviKuHu9iIfPo` | `n8n/keyway-process-queue.workflow.ts` | schedule, 15 min |
 | Keyway - Seed Queue | `S2RN9PNHdZFZoZYe` | `n8n/keyway-seed-queue.workflow.ts` | schedule, daily 06:00 (an earlier draft `KCS0Swhq1EECnpTM` is archived) |
 | Keyway - Reset Queue Rows | `U2h9cJTWhJ9UBVPZ` | `n8n/keyway-reset-rows.workflow.ts` | n8n form, login required (`n8nUserAuth`) |
+| Keyway - Queue Status | `OcJXxuHTvgEWE56i` | `n8n/keyway-queue-status.workflow.ts` | n8n form at `/form/keyway-status`, login required; renders an HTML report via Respond to Webhook |
 
 **Seed Queue** reuses the frozen seeder's Graph listing (same folder, `$expand=listItem`, `@odata.nextLink` paging, credential `Sharepoint video process`) and adds de-duplication: it loads every `driveItemId` already in the table once (`executeOnce`) and a Code node keeps only unseen files. Verified 2026-09-06: 281 files in the folder, 281 already queued, 0 inserted. (n8n's `rowNotExists` operation also returned 0 in that situation and was replaced only because the explicit version logs its counts.)
 
